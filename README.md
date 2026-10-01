@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShiftMaster v2
 
-## Getting Started
+Jadwal shift staf dan jadwal lab UPT Laboratorium. Satu aplikasi Next.js full-stack
+dengan PostgreSQL. Rencana lengkap, data model, dan urutan pengerjaan ada di
+[docs/PLAN.md](docs/PLAN.md).
 
-First, run the development server:
+## Menjalankan di lokal
+
+Butuh Node 24, pnpm 9, dan PostgreSQL (di laptop ini: Postgres 17 dari EnvKit, user `postgres`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local        # lalu isi nilainya
+psql -U postgres -c "create database shiftmaster_dev;"
+pnpm db:migrate                   # buat tabel
+pnpm db:seed                      # area, ruangan, shift, kursi + superadmin
+pnpm dev                          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `pnpm db:seed --demo` menambah akun staf `demo` untuk mencoba login PIN. PIN-nya
+  tertulis di `src/lib/db/seed.ts`. Hanya untuk development.
+- Superadmin pertama dibuat dari `BOOTSTRAP_SUPERADMIN_EMAIL` saat `pnpm db:seed`.
+  Login admin butuh `GOOGLE_CLIENT_ID` (lihat [docs/google-sheets-credentials.md](docs/google-sheets-credentials.md) bagian B).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Perintah
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Perintah | Fungsi |
+|---|---|
+| `pnpm dev` | Server development |
+| `pnpm build` / `pnpm start` | Build dan jalankan versi produksi |
+| `pnpm typecheck` | `next typegen` + `tsc` |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest (logika murni: auth, mode, seed data) |
+| `pnpm db:generate` | Buat file migrasi dari perubahan `src/lib/db/schema.ts` |
+| `pnpm db:migrate` | Jalankan migrasi ke `DATABASE_URL` |
+| `pnpm db:seed` | Isi konfigurasi awal (hanya menambah yang belum ada) |
+| `pnpm db:studio` | Drizzle Studio untuk melihat isi database |
+| `pnpm sheets:token` | Buat refresh token Google Sheets |
 
-## Learn More
+## Deploy
 
-To learn more about Next.js, take a look at the following resources:
+`Dockerfile` membangun image `output: "standalone"`. Container menjalankan migrasi
+database sendiri saat start (`RUN_MIGRATIONS=true`) dan menyediakan `GET /api/health`
+untuk healthcheck. Environment yang dibutuhkan ada di `.env.example`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Catatan untuk yang melanjutkan
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Ini **Next.js 16**. Baca panduan di `node_modules/next/dist/docs/` sebelum menulis kode
+  (`middleware` sekarang `proxy.ts`, `params`/`cookies()` async, dll).
+- Hak akses selalu dicek di server: `requireMember()` / `requireRole()` di setiap halaman
+  dan Server Action (`src/lib/auth/session.ts`). `proxy.ts` hanya pengecekan awal.
+- Kode berbahasa Inggris, teks UI berbahasa Indonesia.
+- Warna hanya lewat token di `src/app/globals.css`. Oranye (`brand`) khusus penanda
+  "sekarang/aktif".

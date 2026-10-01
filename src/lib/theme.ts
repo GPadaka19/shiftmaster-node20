@@ -2,6 +2,13 @@ export type ThemePreference = "light" | "dark" | "system";
 
 export const THEME_STORAGE_KEY = "theme";
 
+declare global {
+  interface Window {
+    /** Defined by THEME_SCRIPT (rendered by ThemeScript in the root layout). */
+    __applyTheme?: () => void;
+  }
+}
+
 /**
  * Runs in <head> before first paint: applies the saved preference (or the OS
  * setting for "system") as data-theme, and follows OS changes while on "system".

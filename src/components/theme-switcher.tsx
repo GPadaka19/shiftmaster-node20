@@ -5,13 +5,6 @@ import { useSyncExternalStore } from "react";
 import { cn } from "cn";
 import { THEME_STORAGE_KEY, type ThemePreference } from "@/lib/theme";
 
-declare global {
-  interface Window {
-    /** Defined by THEME_SCRIPT in the root layout. */
-    __applyTheme?: () => void;
-  }
-}
-
 const OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Terang", icon: Sun },
   { value: "dark", label: "Gelap", icon: Moon },

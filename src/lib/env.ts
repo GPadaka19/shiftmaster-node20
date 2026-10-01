@@ -24,6 +24,9 @@ const schema = z.object({
   GOOGLE_SHEETS_CLIENT_ID: optional,
   GOOGLE_SHEETS_CLIENT_SECRET: optional,
   GOOGLE_SHEETS_REFRESH_TOKEN: optional,
+
+  /** Bearer token for /api/cron/*; cron endpoints are off when unset. */
+  CRON_SECRET: optional,
 });
 
 export type Env = z.infer<typeof schema>;

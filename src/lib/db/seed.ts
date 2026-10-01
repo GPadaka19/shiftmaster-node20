@@ -14,6 +14,8 @@ import {
   areas,
   assignments,
   auditLog,
+  memberG2Locks,
+  memberPatterns,
   members,
   rooms,
   rosterWeeks,
@@ -142,6 +144,34 @@ async function seedDemoRoster(db: Db) {
   const lab = [DEMO_STAFF.nickname, ...DEMO_TEAM.lab];
   const floors = ["g2-l23", "g2-l4", "g7-l3", "g7-l4", "g7-l5", "g7-l6"];
   const thisWeek = weekStartIso(todayIso());
+
+  // Rules for the generator, only for members that have none yet: half the lab
+  // team on each shift (swapping daily), a fixed studio, PKL alternating
+  // buildings, one G7-only member and one Friday G2 lock.
+  const [hasRules] = await db.select({ memberId: memberPatterns.memberId }).from(memberPatterns).limit(1);
+  if (!hasRules) {
+    const patterns: (typeof memberPatterns.$inferInsert)[] = [];
+    for (let weekday = 1; weekday <= 5; weekday++) {
+      lab.forEach((nickname, i) =>
+        patterns.push({ memberId: id(nickname), weekday, shiftId: shiftId.get((i + weekday) % 2 === 0 ? "pagi" : "siang")!, areaId: null }),
+      );
+      DEMO_TEAM.studio.forEach((nickname, i) =>
+        patterns.push({ memberId: id(nickname), weekday, shiftId: shiftId.get(i < 2 ? "pagi" : "siang")!, areaId: areaId.get("studio-g2")! }),
+      );
+      for (const nickname of DEMO_TEAM.pkl) {
+        patterns.push({
+          memberId: id(nickname),
+          weekday,
+          shiftId: shiftId.get(weekday % 2 === 1 ? "pagi" : "siang")!,
+          areaId: areaId.get(weekday % 2 === 1 ? "g2" : "g7")!,
+        });
+      }
+    }
+    await db.insert(memberPatterns).values(patterns);
+    await db.update(members).set({ maxG2PerWeek: 0 }).where(eq(members.id, id("Kiki")));
+    await db.insert(memberG2Locks).values({ memberId: id("Joko"), weekday: 5 });
+    console.info(`[seed] demo rules (${patterns.length} pattern rows)`);
+  }
 
   for (const weekStart of [addDaysIso(thisWeek, -7), thisWeek]) {
     const [existing] = await db.select({ id: rosterWeeks.id }).from(rosterWeeks).where(eq(rosterWeeks.weekStart, weekStart));

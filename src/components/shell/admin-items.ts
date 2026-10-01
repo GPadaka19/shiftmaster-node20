@@ -1,4 +1,4 @@
-import { CalendarCog, Users, type LucideIcon } from "lucide-react";
+import { Activity, CalendarCog, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
 import { hasRole, type Role } from "@/lib/auth/roles";
 
 // Not a client module, so the Akun page (server) and the sidebar (client) can
@@ -8,10 +8,31 @@ export type AdminItem = { href: string; label: string; description: string; icon
 
 export const ADMIN_ITEMS: AdminItem[] = [
   {
+    href: "/admin/roster",
+    label: "Editor Roster",
+    description: "Generate, ubah, dan terbitkan roster mingguan",
+    icon: SquarePen,
+    minRole: "admin",
+  },
+  {
+    href: "/admin/aturan",
+    label: "Aturan",
+    description: "Pola Pagi/Siang, batas dan kunci G2",
+    icon: ListChecks,
+    minRole: "admin",
+  },
+  {
     href: "/admin/kalender",
     label: "Kalender",
     description: "Periode kuliah/libur dan hari libur",
     icon: CalendarCog,
+    minRole: "admin",
+  },
+  {
+    href: "/admin/status",
+    label: "Status",
+    description: "Sinkronisasi Google Sheets",
+    icon: Activity,
     minRole: "admin",
   },
   {

@@ -90,7 +90,10 @@ Setelah yang baru terbukti jalan:
 ## B. Client login admin (dibutuhkan di Fase 0)
 
 1. **Clients → Create client**, Application type: **Web application**.
-2. **Authorized JavaScript origins**: `https://shiftmaster.test` (development lewat EnvKit),
-   `http://localhost:5171`, dan domain produksi (misalnya `https://shiftmaster.example.id`).
+2. **Authorized JavaScript origins**:
+   - `http://localhost:5171` untuk development. Google menolak domain non-publik seperti
+     `.test`, jadi login admin di lokal harus lewat localhost, bukan `https://shiftmaster.test`.
+   - Domain uji dan domain akhir, misalnya `https://sm.gpadaka.com` dan `https://shiftmaster.gpadaka.com`.
+   - **Authorized redirect URIs** dikosongkan, karena tombol Google memakai mode popup.
 3. Salin **Client ID** ke `GOOGLE_CLIENT_ID`. Client secret tidak dipakai, karena server
    hanya memverifikasi ID token.

@@ -19,11 +19,15 @@ pnpm db:seed                      # area, ruangan, shift, kursi + superadmin
 Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") di
 **https://shiftmaster.test** (port 5171). Tanpa EnvKit: `pnpm dev`.
 
+- `pnpm db:seed` juga membuat:
+  - superadmin pertama dari `BOOTSTRAP_SUPERADMIN_EMAIL`;
+  - tim awal (admin dan staf) dari `MEMBERS` di `src/lib/db/seed-data.ts`, **sekali saja per database**.
+    Setelah itu, anggota dikelola dari halaman Anggota, termasuk PIN staf.
 - `pnpm db:seed --demo` (development saja) menambah:
   - akun staf `demo` untuk mencoba login PIN (PIN-nya tertulis di `src/lib/db/seed.ts`);
-  - 18 staf fiktif dan roster terbit untuk minggu ini dan minggu lalu.
-- Superadmin pertama dibuat dari `BOOTSTRAP_SUPERADMIN_EMAIL` saat `pnpm db:seed`.
-  Login admin butuh `GOOGLE_CLIENT_ID` (lihat [docs/google-sheets-credentials.md](docs/google-sheets-credentials.md) bagian B).
+  - contoh pola Pagi/Siang untuk staf yang belum punya pola. Roster dibuat dari halaman admin Roster.
+- Login admin butuh `GOOGLE_CLIENT_ID` (lihat [docs/google-sheets-credentials.md](docs/google-sheets-credentials.md) bagian B).
+  Di lokal, login admin harus lewat **http://localhost:5171**, karena Google tidak menerima domain `.test`.
 
 ## Perintah
 

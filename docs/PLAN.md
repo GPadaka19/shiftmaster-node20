@@ -409,7 +409,7 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Halaman Hari Ini, Roster (+ riwayat lewat navigasi minggu), Jadwal Lab, Agenda, Akun.
 - Catatan:
   - Ruangan tersembunyi juga disaring dari agenda, bukan hanya dari jadwal lab.
-  - Data demo untuk development: `pnpm db:seed --demo` (18 staf fiktif + roster 2 minggu).
+  - Data demo untuk development: `pnpm db:seed --demo` (akun demo + contoh pola). Tim asli di-seed sekali dari `seed-data.ts`.
   - Roster hanya bisa diisi lewat seed demo sampai editor di Fase 2 selesai.
 
 **Fase 2 — Admin mengelola** ✅ selesai 1 Okt 2026
@@ -442,6 +442,14 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Halaman `/tukar` (staf) dan `/admin/tukar` (admin), badge di navigasi, banner di Hari Ini.
 - Diuji: alur lengkap di browser, kunci per kursi, jawaban dari orang yang salah, tolak, batal,
   kedaluwarsa karena roster berubah dan karena lewat batas waktu.
+
+**Tim awal + aturan staf baru** ✅ 1 Okt 2026
+- Tim saat go-live (admin, staf Studio, staf Lab) di-seed **sekali** dari `MEMBERS` di `seed-data.ts`.
+  Rifat dan Rafif berstatus PKL, tapi bertugas sebagai staf Lab biasa.
+- Kolom `members.started_on` (Mulai bertugas). Staf **Lab** yang baru masuk hanya ditempatkan di **Gedung 7**
+  selama 4 minggu roster pertama (`lib/roster/newcomer.ts`, dengan test). Mulai di akhir pekan dihitung dari Senin berikutnya.
+  Generator memperlakukan batas G2-nya sebagai 0 dan mengabaikan kunci G2-nya. Editor roster dan preview tukar shift
+  memberi peringatan kalau staf baru ditaruh di G2. Kosongkan tanggalnya untuk staf lama.
 
 **Selesai (MVP)** = staf bisa login dan melihat shift hari ini, roster, jadwal lab, dan
 agenda. Admin bisa generate/edit/terbitkan roster serta mengatur periode dan libur.

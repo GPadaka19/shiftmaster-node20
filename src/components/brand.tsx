@@ -1,7 +1,26 @@
+import Image from "next/image";
 import { cn } from "cn";
 
-/** Two offset bars (the Pagi and Siang shifts) and a "now" dot. */
+/** The UPT Lab logo (from logo.png in the repo root, resized into public/brand). */
 export function BrandMark({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/brand/logo-96.png"
+      alt=""
+      width={96}
+      height={96}
+      unoptimized
+      priority
+      className={cn("size-6 rounded-md", className)}
+    />
+  );
+}
+
+/**
+ * The previous mark: two offset bars (the Pagi and Siang shifts) and a "now"
+ * dot. Kept for reference; the app uses BrandMark. Also in public/brand/logo-lama.svg.
+ */
+export function LegacyBrandMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className={cn("size-6", className)}>
       <rect x="1" y="1" width="22" height="22" rx="5" className="fill-foreground" />

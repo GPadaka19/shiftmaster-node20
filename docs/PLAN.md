@@ -144,7 +144,7 @@ src/
     (app)/admin/...             lihat bagian 6
     api/health/route.ts
     api/cron/weekly-roster/route.ts
-    manifest.ts, icon.svg       PWA (bisa di-install)
+    manifest.ts, icon.png       PWA (bisa di-install); logo di public/brand, sumbernya logo.png
   proxy.ts                      cek cookie sesi → /masuk
   instrumentation.ts            migrasi DB saat server start (RUN_MIGRATIONS=true)
   lib/

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,6 +43,12 @@ export default async function SignInPage({ searchParams }: PageProps<"/login">) 
             <p className="text-sm text-muted-foreground">Khusus admin dan superadmin yang emailnya sudah terdaftar.</p>
           </TabsContent>
         </Tabs>
+
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            Kebijakan Privasi
+          </Link>
+        </p>
       </div>
     </main>
   );

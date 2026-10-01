@@ -273,12 +273,24 @@ Riwayat = daftar `roster_weeks` yang sudah terbit.
 
 **sheet_snapshots** (`source` timetable/agenda, `fetched_at`, `payload` jsonb, `error`)
 
-### Disiapkan untuk tukar shift (bukan MVP)
+### Tukar shift
 
-**swap_requests** (`requester_id`, `target_id`, dua `assignment_id`, `status`
-pending/approved/rejected/cancelled, `decided_by`, `decided_at`). Cukup **satu persetujuan**
-dari admin mana pun atau superadmin. Aturan dari `shiftmaster-laravel/PRODUCT.md`: sesama
-pool, hari yang sama, shift berlawanan.
+**swap_requests** (`roster_week_id`, `date`, `requester_id` + `target_id`, lalu untuk tiap sisi
+`assignment_id` + `area_id` + `shift_id` saat diajukan; `reason`, `status`,
+`target_responded_at`, `decided_by`, `decided_at`, `note`).
+
+- Status: `awaiting_target` → `awaiting_admin` → `approved`. Status akhir lainnya:
+  `declined` (rekan menolak), `rejected` (admin menolak), `cancelled` (pengaju membatalkan),
+  `expired`.
+- Cukup **satu persetujuan** dari admin mana pun atau superadmin.
+- Aturan (dari `shiftmaster-laravel/PRODUCT.md`): sesama pool Lab/Studio, hari yang sama, shift
+  berlawanan, roster masa kuliah yang sudah terbit. PKL tidak bisa menukar.
+- Batas waktu H-1 pukul 23.59 WIB. Lewat dari itu, permintaan otomatis kedaluwarsa.
+- Satu permintaan aktif per kursi; kursi yang sedang diproses terkunci.
+- Area/shift saat diajukan disimpan. Kalau roster berubah sebelum disetujui, permintaan
+  kedaluwarsa dan tidak menukar apa pun.
+- Saat disetujui, yang ditukar adalah area/shift/posisi kedua kursi dalam satu transaksi.
+  Admin melihat pelanggaran aturan roster yang akan muncul sebelum menyetujui.
 
 ---
 
@@ -315,6 +327,7 @@ Navigasi: mobile = bottom bar 4 item, desktop = sidebar kiri. Badge mode di head
 | **Roster** `/roster` | Roster minggu ini per hari: area → Pagi/Siang → lab + sesi. Area saya dibuka otomatis. Tampilan tabel minggu (area × hari). Pemilih minggu untuk riwayat. Tombol "Shift Saya" untuk ringkasan pribadi. Filter nama. | Sama, dikelompokkan per gedung (Studio G2 / Gedung 2 / Gedung 7). |
 | **Jadwal Lab** `/jadwal` | Jadwal kuliah mingguan: hari → gedung → lantai → lab × 5 slot. Filter gedung, lab, dosen. Hari ini terbuka otomatis. | Tidak tampil di navigasi. |
 | **Agenda** `/agenda` | Tidak tampil di navigasi (URL tetap bisa diakses). | Agenda per tanggal, rentang 2/3/7 hari, dikelompokkan per lantai. Kegiatan maintenance diberi label. |
+| **Tukar** `/tukar` | Ajukan tukar (pilih shift sendiri → rekan di shift sebaliknya → alasan), jawab permintaan masuk, batalkan, riwayat. Hanya pool Lab/Studio. | Tidak tampil di navigasi. |
 | **Akun** `/akun` | Profil, ganti PIN, tema terang/gelap/sistem, keluar, link admin. | sama |
 
 ### Admin dan superadmin
@@ -325,6 +338,7 @@ Navigasi: mobile = bottom bar 4 item, desktop = sidebar kiri. Badge mode di head
 | `/admin/aturan` | Pola mingguan per anggota, cap G2, lock G2 per hari, default kuota. |
 | `/admin/kalender` | Periode (mode per rentang tanggal) + hari libur. |
 | `/admin/status` | Kondisi sinkron Sheets (terakhir berhasil, error), tombol refresh, kode ruangan tak dikenal. |
+| `/admin/tukar` | Persetujuan tukar shift: setujui/tolak (dengan catatan), peringatan aturan roster setelah ditukar, riwayat. Jumlah yang menunggu tampil sebagai badge di navigasi. |
 
 ### Superadmin saja
 
@@ -338,7 +352,7 @@ Dua pilihan: **Staf** (nickname + PIN, dengan hitung mundur lockout) dan **Admin
 
 ### Ditunda (bukan MVP)
 
-Tukar shift (lihat bagian 4), Hall of Fame, notifikasi Telegram, mode offline,
+Hall of Fame, notifikasi Telegram, mode offline,
 onboarding tour, command palette, shortcut keyboard, splash screen.
 
 ---
@@ -421,6 +435,13 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Isi anggota, PIN, pola mingguan, periode, dan libur.
 - Jalan paralel dengan sistem lama selama 1–2 minggu, cocokkan hasilnya.
 - Pindah domain, arsipkan `shiftmaster` dan `jadwal-lab-upt`.
+
+**Fitur tambahan: Tukar shift** ✅ selesai 1 Okt 2026
+- Tabel `swap_requests` (migrasi `0001_swap_requests`), aturan di `lib/swap/rules.ts` (dengan test),
+  layanan transaksional di `lib/swap/service.ts`.
+- Halaman `/tukar` (staf) dan `/admin/tukar` (admin), badge di navigasi, banner di Hari Ini.
+- Diuji: alur lengkap di browser, kunci per kursi, jawaban dari orang yang salah, tolak, batal,
+  kedaluwarsa karena roster berubah dan karena lewat batas waktu.
 
 **Selesai (MVP)** = staf bisa login dan melihat shift hari ini, roster, jadwal lab, dan
 agenda. Admin bisa generate/edit/terbitkan roster serta mengatur periode dan libur.

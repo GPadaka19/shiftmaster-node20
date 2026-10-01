@@ -33,7 +33,7 @@ Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") 
 | `pnpm build` / `pnpm start` | Build dan jalankan versi produksi |
 | `pnpm typecheck` | `next typegen` + `tsc` |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Vitest (logika murni: auth, mode, parser Sheets, slot, roster, validasi) |
+| `pnpm test` | Vitest (logika murni: auth, mode, parser Sheets, slot, roster, validasi, tukar shift) |
 | `pnpm db:generate` | Buat file migrasi dari perubahan `src/lib/db/schema.ts` |
 | `pnpm db:migrate` | Jalankan migrasi ke `DATABASE_URL` |
 | `pnpm db:seed` | Isi konfigurasi awal (hanya menambah yang belum ada) |

@@ -2,14 +2,11 @@ import {
   ArrowLeftRight,
   CalendarOff,
   ClipboardList,
-  Clock,
   CloudOff,
   Coffee,
   MapPin,
   PartyPopper,
   ShieldCheck,
-  Sun,
-  Sunset,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -20,11 +17,12 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { SheetFreshness } from "@/components/schedule/freshness";
 import { RoomDayCard } from "@/components/schedule/room-card";
+import { shiftIcon, shiftTime } from "@/components/shift";
 import { Card, CardContent } from "@/components/ui/card";
 import { hasRole } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
 import { getHolidays, getModeToday } from "@/lib/period/queries";
-import { groupByArea, roomKeysForArea } from "@/lib/rooms/group";
+import { areaKey, groupByArea, roomKeysForArea } from "@/lib/rooms/group";
 import { getRoomDirectory } from "@/lib/rooms/queries";
 import { ADMIN_HOURS, getPublishedRosterWeek } from "@/lib/roster/queries";
 import { dutyOn, teammatesOf, type RosterAssignment } from "@/lib/roster/view";
@@ -35,8 +33,6 @@ import { swapCounts } from "@/lib/swap/service";
 import { formatLongDate, isoWeekday, timeOfDay, weekStartIso } from "@/lib/time";
 
 export const metadata = { title: "Hari Ini" };
-
-const SHIFT_ICON: Record<string, LucideIcon> = { pagi: Sun, siang: Sunset };
 
 export default async function TodayPage() {
   const member = await requireMember();
@@ -56,8 +52,8 @@ export default async function TodayPage() {
 async function SwapNotice({ memberId, isAdmin }: { memberId: number; isAdmin: boolean }) {
   const { incoming, awaitingAdmin } = await swapCounts(memberId, isAdmin);
   const notices = [
-    incoming > 0 && { href: "/tukar", text: `${incoming} permintaan tukar shift menunggu jawabanmu` },
-    awaitingAdmin > 0 && { href: "/admin/tukar", text: `${awaitingAdmin} permintaan tukar shift menunggu persetujuan admin` },
+    incoming > 0 && { href: "/swaps", text: `${incoming} permintaan tukar shift menunggu jawabanmu` },
+    awaitingAdmin > 0 && { href: "/admin/swaps", text: `${awaitingAdmin} permintaan tukar shift menunggu persetujuan admin` },
   ].filter((n): n is { href: string; text: string } => Boolean(n));
   if (notices.length === 0) return null;
   return (
@@ -105,7 +101,7 @@ async function TodayContent({
       <DutyCard
         icon={ShieldCheck}
         label="Admin"
-        time={`${ADMIN_HOURS.start}–${ADMIN_HOURS.end}`}
+        time={shiftTime(ADMIN_HOURS)}
         place={dutyLabel ?? "Admin UPT Laboratorium"}
       />
     );
@@ -136,9 +132,9 @@ async function TodayContent({
   return (
     <div className="grid gap-8">
       <DutyCard
-        icon={SHIFT_ICON[duty.shift.code] ?? Clock}
+        icon={shiftIcon(duty.shift.code)}
         label={duty.shift.label}
-        time={`${duty.shift.start}–${duty.shift.end}`}
+        time={shiftTime(duty.shift)}
         place={duty.area.name}
       >
         <Teammates teammates={teammatesOf(week, duty)} />
@@ -194,7 +190,7 @@ function Teammates({ teammates }: { teammates: RosterAssignment[] }) {
           <li key={mate.member.id} className="flex justify-between gap-4">
             <span className="font-medium">{mate.member.nickname}</span>
             <span className="text-muted-foreground tabular-nums">
-              {mate.shift.label} · {mate.shift.start}–{mate.shift.end}
+              {mate.shift.label} · {shiftTime(mate.shift)}
             </span>
           </li>
         ))}
@@ -224,7 +220,7 @@ async function AreaRooms({ duty, weekday }: { duty: RosterAssignment; weekday: n
         <p className="text-sm text-muted-foreground">Tidak ada lab terjadwal di area ini.</p>
       ) : (
         groups.map((group) => (
-          <div key={group.area?.code ?? "lainnya"} className="grid gap-2">
+          <div key={areaKey(group)} className="grid gap-2">
             {groups.length > 1 && <h3 className="text-sm font-medium text-muted-foreground">{group.area?.name ?? "Lainnya"}</h3>}
             {group.items.map((room) => (
               <RoomDayCard key={room.code} room={room} timings={timings} />

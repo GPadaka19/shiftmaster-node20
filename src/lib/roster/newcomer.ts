@@ -1,6 +1,6 @@
 import { addDaysIso, isoWeekday, weekStartIso } from "@/lib/time";
 
-// New lab staff work only in Gedung 7 for their first four roster weeks, so
+// New lab staff work only in building G7 for their first four roster weeks, so
 // they learn one building before covering G2. Studio staff are not affected.
 // Members without a start date (the team at go-live) are not newcomers.
 
@@ -29,4 +29,12 @@ export function g2RuleFor(member: RuleMember, weekStart: string, defaultMaxG2: n
   const until = g7OnlyUntil(member, weekStart);
   if (until) return { maxG2: 0, g7OnlyUntil: until };
   return { maxG2: member.pool === "lab" ? (member.maxG2PerWeek ?? defaultMaxG2) : member.maxG2PerWeek, g7OnlyUntil: null };
+}
+
+/** G2 locks that apply this week: a newcomer's lock would contradict their G7-only weeks. */
+export function applicableLocks<T extends { memberId: number }>(
+  locks: readonly T[],
+  members: ReadonlyMap<number, { g7OnlyUntil?: string | null }>,
+): T[] {
+  return locks.filter((lock) => !members.get(lock.memberId)?.g7OnlyUntil);
 }

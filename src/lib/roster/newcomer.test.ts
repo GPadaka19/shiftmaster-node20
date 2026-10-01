@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstRosterWeek, g2RuleFor, g7OnlyUntil } from "./newcomer";
+import { applicableLocks, firstRosterWeek, g2RuleFor, g7OnlyUntil } from "./newcomer";
 
 const lab = (startedOn: string | null, maxG2PerWeek: number | null = null) => ({ pool: "lab", startedOn, maxG2PerWeek });
 
@@ -37,5 +37,23 @@ describe("g2RuleFor", () => {
     expect(g2RuleFor(lab("2026-10-07", 3), "2026-11-02", 2)).toEqual({ maxG2: 3, g7OnlyUntil: null });
     expect(g2RuleFor(lab(null), "2026-10-05", 2)).toEqual({ maxG2: 2, g7OnlyUntil: null });
     expect(g2RuleFor({ pool: "studio", startedOn: null, maxG2PerWeek: null }, "2026-10-05", 2)).toEqual({ maxG2: null, g7OnlyUntil: null });
+  });
+});
+
+describe("applicableLocks", () => {
+  it("drops newcomers' locks and keeps the rest", () => {
+    const members = new Map([
+      [1, { g7OnlyUntil: "2026-10-30" }],
+      [2, { g7OnlyUntil: null }],
+    ]);
+    const locks = [
+      { memberId: 1, weekday: 1 },
+      { memberId: 2, weekday: 2 },
+      { memberId: 3, weekday: 3 },
+    ];
+    expect(applicableLocks(locks, members)).toEqual([
+      { memberId: 2, weekday: 2 },
+      { memberId: 3, weekday: 3 },
+    ]);
   });
 });

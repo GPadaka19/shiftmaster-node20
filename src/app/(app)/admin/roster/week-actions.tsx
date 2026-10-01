@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
+import { useAction } from "@/hooks/use-action";
+import type { Mode } from "@/lib/period/resolve";
 import {
   copyFromWeek,
   createEmpty,
@@ -16,19 +17,12 @@ import {
 type Props = {
   weekStart: string;
   status: "none" | "draft" | "published";
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   previousWeek: { weekStart: string; label: string } | null;
 };
 
 export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
-  const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<RosterActionResult>({});
-
-  const act = (action: () => Promise<RosterActionResult>, confirmText?: string) => {
-    if (confirmText && !window.confirm(confirmText)) return;
-    setResult({});
-    startTransition(async () => setResult(await action()));
-  };
+  const { pending, state: result, run: act } = useAction<RosterActionResult>();
 
   const copyLabel = previousWeek ? `Salin dari ${previousWeek.label}` : null;
 

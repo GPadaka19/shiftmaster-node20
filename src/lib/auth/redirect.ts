@@ -5,6 +5,6 @@
 export function safeNextPath(next: unknown): string {
   if (typeof next !== "string") return "/";
   if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return "/";
-  if (next.startsWith("/masuk")) return "/";
+  if (next.startsWith("/login")) return "/";
   return next;
 }

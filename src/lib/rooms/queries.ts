@@ -1,14 +1,10 @@
 import "server-only";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { areas, rooms } from "@/lib/db/schema";
 import { roomKey } from "@/lib/sheets/cells";
-import type { AreaInfo, RoomDirectory } from "./group";
-
-export const getAreas = cache(async (): Promise<AreaInfo[]> => {
-  return db.select().from(areas).orderBy(asc(areas.sortOrder));
-});
+import type { RoomDirectory } from "./group";
 
 /** Every known room, keyed by roomKey(code), with its staffing area. */
 export const getRoomDirectory = cache(async (): Promise<RoomDirectory> => {

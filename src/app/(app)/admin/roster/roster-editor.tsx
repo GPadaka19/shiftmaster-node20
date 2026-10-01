@@ -1,9 +1,11 @@
 "use client";
 
 import { CopyCheck, X } from "lucide-react";
-import { useState, useTransition } from "react";
 import { cn } from "cn";
 import { FormMessage } from "@/components/form";
+import { useAction } from "@/hooks/use-action";
+import { POOL_SHORT_LABEL, type Pool } from "@/lib/members/labels";
+import type { Mode } from "@/lib/period/resolve";
 import { WEEKDAY_NAMES } from "@/lib/time";
 import { clearSeat, copyDay, seatMember, type RosterActionResult } from "./actions";
 
@@ -17,11 +19,11 @@ export type EditorRow = {
 };
 
 export type EditorSeat = { id: number; memberId: number; nickname: string; inactive: boolean };
-export type EditorMember = { id: number; nickname: string; pool: "lab" | "studio" | "pkl" | null };
+export type EditorMember = { id: number; nickname: string; pool: Pool | null };
 
 type Props = {
   weekStart: string;
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   dates: string[];
   holidays: Record<string, string>;
   rows: EditorRow[];
@@ -32,17 +34,10 @@ type Props = {
   dutyLabels: Record<string, Record<number, string>>;
 };
 
-const POOL_FOR_KIND = { floor: "lab", studio: "studio", building: "pkl" } as const;
-const POOL_LABEL = { lab: "Lab", studio: "Studio", pkl: "PKL" } as const;
+const POOL_FOR_KIND = { floor: "lab", studio: "studio", building: "pkl" } as const satisfies Record<EditorRow["areaKind"], Pool>;
 
 export function RosterEditor({ weekStart, mode, dates, holidays, rows, seats, members, dutyLabels }: Props) {
-  const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<RosterActionResult>({});
-
-  const act = (action: () => Promise<RosterActionResult>) => {
-    setResult({});
-    startTransition(async () => setResult(await action()));
-  };
+  const { pending, state: result, run: act } = useAction<RosterActionResult>();
 
   return (
     <div className="grid gap-3">
@@ -67,11 +62,7 @@ export function RosterEditor({ weekStart, mode, dates, holidays, rows, seats, me
                       aria-label={`Salin ${WEEKDAY_NAMES[i + 1]} ke semua hari`}
                       className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
                       disabled={pending}
-                      onClick={() => {
-                        if (window.confirm(`Samakan semua hari minggu ini dengan ${WEEKDAY_NAMES[i + 1]}?`)) {
-                          act(() => copyDay(weekStart, date));
-                        }
-                      }}
+                      onClick={() => act(() => copyDay(weekStart, date), `Samakan semua hari minggu ini dengan ${WEEKDAY_NAMES[i + 1]}?`)}
                     >
                       <CopyCheck className="size-4" aria-hidden="true" />
                     </button>
@@ -131,7 +122,7 @@ function SeatCell({
 }: {
   cell: EditorSeat[];
   row: EditorRow;
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   members: EditorMember[];
   dutyLabels: Record<number, string>;
   disabled: boolean;
@@ -180,7 +171,7 @@ function SeatCell({
           <option value="">+ Tambah</option>
           {preferred ? (
             <>
-              <optgroup label={POOL_LABEL[preferred]}>
+              <optgroup label={POOL_SHORT_LABEL[preferred]}>
                 {first.map((m) => (
                   <option key={m.id} value={m.id}>
                     {label(m)}

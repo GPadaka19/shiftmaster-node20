@@ -29,7 +29,7 @@ function minutes(time: string): number {
 
 /**
  * Whether `slot` is running or about to start, given the ISO weekday
- * (1 = Senin) and the time of day as "HH:mm", both in WIB.
+ * (1 = Monday) and the time of day as "HH:mm", both in WIB.
  */
 export function slotTiming(slot: Slot, weekday: number, time: string): SlotTiming {
   if (weekday === FRIDAY && slot.index === FRIDAY_PRAYER_SLOT) return null;

@@ -6,7 +6,7 @@
 import { and, count, eq, sql } from "drizzle-orm";
 import { hashPin, normalizeNickname } from "@/lib/auth/pin";
 import { env } from "@/lib/env";
-import { seedConfiguration, seedMembers, seedSuperadmin } from "./bootstrap";
+import { seedConfiguration, seedFirstRoster, seedMembers, seedSuperadmin } from "./bootstrap";
 import { createDb, type Db } from "./client";
 import { areas, memberPatterns, members, shifts } from "./schema";
 
@@ -36,7 +36,7 @@ async function seedDemo(db: Db) {
 /**
  * Example weekly patterns so the roster generator has something to work with
  * in development. Only for members that have none yet; real patterns are set
- * on the Aturan page.
+ * on the rules page.
  */
 async function seedDemoRules(db: Db) {
   const staff = await db
@@ -48,9 +48,9 @@ async function seedDemoRules(db: Db) {
     .orderBy(members.id);
   const areaId = new Map((await db.select({ id: areas.id, code: areas.code }).from(areas)).map((a) => [a.code, a.id]));
   const shiftId = new Map((await db.select({ id: shifts.id, code: shifts.code }).from(shifts)).map((s) => [s.code, s.id]));
-  const pick = (morning: boolean) => shiftId.get(morning ? "pagi" : "siang")!;
+  const pick = (morning: boolean) => shiftId.get(morning ? "morning" : "afternoon")!;
 
-  // Lab: half on each shift, swapping daily. Studio: half Pagi, half Siang.
+  // Lab: half on each shift, swapping daily. Studio: half morning, half afternoon.
   // PKL: both together, alternating buildings and shifts.
   const byPool = (pool: string) => staff.filter((m) => m.pool === pool);
   const studio = byPool("studio");
@@ -80,6 +80,7 @@ async function main() {
     await seedConfiguration(db);
     await seedSuperadmin(db, { email: env().BOOTSTRAP_SUPERADMIN_EMAIL, nickname: env().BOOTSTRAP_SUPERADMIN_NICKNAME });
     await seedMembers(db);
+    await seedFirstRoster(db);
     if (process.argv.includes("--demo")) {
       await seedDemo(db);
       await seedDemoRules(db);

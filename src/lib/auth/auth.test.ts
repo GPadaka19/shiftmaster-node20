@@ -76,14 +76,14 @@ describe("hasRole", () => {
 
 describe("safeNextPath", () => {
   it("keeps same-site paths", () => {
-    expect(safeNextPath("/roster?minggu=2026-10-05")).toBe("/roster?minggu=2026-10-05");
+    expect(safeNextPath("/roster?week=2026-10-05")).toBe("/roster?week=2026-10-05");
   });
 
   it("rejects anything that could leave the site or loop back to login", () => {
     expect(safeNextPath("https://evil.example")).toBe("/");
     expect(safeNextPath("//evil.example")).toBe("/");
     expect(safeNextPath("/\\evil.example")).toBe("/");
-    expect(safeNextPath("/masuk")).toBe("/");
+    expect(safeNextPath("/login")).toBe("/");
     expect(safeNextPath(null)).toBe("/");
   });
 });

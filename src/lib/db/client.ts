@@ -11,3 +11,6 @@ export function createDb(url: string, options: postgres.Options<Record<string, n
 }
 
 export type Db = ReturnType<typeof createDb>["db"];
+
+/** The `tx` handed to `db.transaction(async (tx) => …)`, or anything that can run the same queries. */
+export type Executor = Parameters<Parameters<Db["transaction"]>[0]>[0];

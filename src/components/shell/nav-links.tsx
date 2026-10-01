@@ -8,14 +8,24 @@ import type { Role } from "@/lib/auth/roles";
 import type { Mode } from "@/lib/period/resolve";
 import { adminItemsFor } from "./admin-items";
 
-type NavItem = { href: string; label: string; icon: LucideIcon };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** Bottom bar: whose badge this item shows, when not its own href's. */
+  badgeKey?: string;
+  /** Bottom bar: other path prefixes the item is active on. */
+  activePrefixes?: string[];
+};
 
 const TODAY: NavItem = { href: "/", label: "Hari Ini", icon: CalendarCheck };
 const ROSTER: NavItem = { href: "/roster", label: "Roster", icon: LayoutGrid };
-const TIMETABLE: NavItem = { href: "/jadwal", label: "Jadwal Lab", icon: CalendarDays };
+const TIMETABLE: NavItem = { href: "/schedule", label: "Jadwal Lab", icon: CalendarDays };
 const AGENDA: NavItem = { href: "/agenda", label: "Agenda", icon: ClipboardList };
-const ACCOUNT: NavItem = { href: "/akun", label: "Akun", icon: CircleUser };
-const SWAP: NavItem = { href: "/tukar", label: "Tukar", icon: ArrowLeftRight };
+// The bottom bar has no admin items: admin pages (and the approvals badge) are
+// reached from the account page on phones.
+const ACCOUNT: NavItem = { href: "/account", label: "Akun", icon: CircleUser, badgeKey: "/admin/swaps", activePrefixes: ["/admin"] };
+const SWAP: NavItem = { href: "/swaps", label: "Tukar", icon: ArrowLeftRight };
 
 /** Counts of things waiting on the member, by href. */
 export type NavBadges = Record<string, number>;
@@ -93,13 +103,10 @@ export function SidebarNav({ mode, role, showSwap, badges }: { mode: Mode; role:
 export function BottomNav({ mode, showSwap, badges }: { mode: Mode; showSwap: boolean; badges: NavBadges }) {
   const pathname = usePathname();
   const items = itemsFor(mode, showSwap);
-  // Admin approvals live under Akun on phones, so its badge shows there.
-  const badgeFor = (href: string) => (href === "/akun" ? badges["/admin/tukar"] : badges[href]);
   return (
     <nav aria-label="Navigasi utama" className={cn("grid", items.length === 5 ? "grid-cols-5" : "grid-cols-4")}>
-      {items.map(({ href, label, icon: Icon }) => {
-        // The bottom bar has no admin items; admin pages are reached from Akun.
-        const active = isActive(pathname, href) || (href === "/akun" && pathname.startsWith("/admin"));
+      {items.map(({ href, label, icon: Icon, badgeKey = href, activePrefixes = [] }) => {
+        const active = isActive(pathname, href) || activePrefixes.some((prefix) => pathname.startsWith(prefix));
         return (
           <Link
             key={href}
@@ -117,7 +124,7 @@ export function BottomNav({ mode, showSwap, badges }: { mode: Mode; showSwap: bo
               )}
             >
               <Icon className="size-5" aria-hidden="true" />
-              <Badge count={badgeFor(href)} className="absolute -top-1.5 right-0.5 h-4 min-w-4 px-1 text-[0.625rem]" />
+              <Badge count={badges[badgeKey]} className="absolute -top-1.5 right-0.5 h-4 min-w-4 px-1 text-[0.625rem]" />
             </span>
             {label}
           </Link>

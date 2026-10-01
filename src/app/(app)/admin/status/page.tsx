@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { WeekStatusBadge } from "@/components/week-nav";
 import { requireRole } from "@/lib/auth/session";
 import { env } from "@/lib/env";
 import { getModeToday } from "@/lib/period/queries";
@@ -66,8 +67,9 @@ export default async function StatusPage() {
     },
   ];
 
-  const weekStatus = (week: Awaited<ReturnType<typeof getWeekRecord>>) =>
-    !week ? <Badge variant="outline">Belum ada</Badge> : week.status === "published" ? <Badge>Terbit</Badge> : <Badge variant="outline">Draf</Badge>;
+  const weekStatus = (week: Awaited<ReturnType<typeof getWeekRecord>>) => (
+    <WeekStatusBadge status={week?.status ?? null} fallback={<Badge variant="outline">Belum ada</Badge>} />
+  );
 
   return (
     <>
@@ -139,10 +141,10 @@ export default async function StatusPage() {
           <CardContent>
             <dl className="grid gap-2 text-sm">
               <Row label={`Minggu ini (${formatWeekRange(thisWeek)})`}>
-                <Link href={`/admin/roster?minggu=${thisWeek}`}>{weekStatus(current)}</Link>
+                <Link href={`/admin/roster?week=${thisWeek}`}>{weekStatus(current)}</Link>
               </Row>
               <Row label={`Minggu depan (${formatWeekRange(nextWeek)})`}>
-                <Link href={`/admin/roster?minggu=${nextWeek}`}>{weekStatus(upcoming)}</Link>
+                <Link href={`/admin/roster?week=${nextWeek}`}>{weekStatus(upcoming)}</Link>
               </Row>
               <Row label="Cron">{config.CRON_SECRET ? "Dikonfigurasi" : "CRON_SECRET belum diisi"}</Row>
             </dl>

@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth/session";
+import { isUniqueViolation } from "@/lib/db/errors";
+import { revalidateRosterViews } from "@/lib/roster/revalidate";
 import {
   addToSeat,
   copyDayToWeek,
@@ -17,24 +18,17 @@ import { isMondayIso } from "@/lib/time";
 
 export type RosterActionResult = { error?: string; success?: string; warnings?: string[] };
 
-function isDuplicateDuty(error: unknown): boolean {
-  const cause = ((error as { cause?: unknown })?.cause ?? error) as { code?: string; constraint_name?: string };
-  return cause.code === "23505" && cause.constraint_name === "assignments_week_date_member_unique";
-}
-
 /** Runs a roster change as an admin and turns rule errors into messages. */
 async function run(weekStart: string, change: (actorId: number) => Promise<RosterActionResult | void>): Promise<RosterActionResult> {
   const actor = await requireRole("admin");
   if (!isMondayIso(weekStart)) return { error: "Minggu tidak valid." };
   try {
     const result = (await change(actor.id)) ?? {};
-    revalidatePath("/admin/roster");
-    revalidatePath("/roster");
-    revalidatePath("/");
+    revalidateRosterViews();
     return result;
   } catch (error) {
     if (error instanceof RosterError) return { error: error.message };
-    if (isDuplicateDuty(error)) return { error: "Anggota ini sudah dijadwalkan di hari itu." };
+    if (isUniqueViolation(error, "assignments_week_date_member_unique")) return { error: "Anggota ini sudah dijadwalkan di hari itu." };
     throw error;
   }
 }

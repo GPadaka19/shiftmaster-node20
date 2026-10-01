@@ -6,6 +6,7 @@ import { cache } from "react";
 import { db } from "@/lib/db";
 import { members, sessions } from "@/lib/db/schema";
 import { env } from "@/lib/env";
+import type { Pool } from "@/lib/members/labels";
 import { SESSION_COOKIE, SESSION_TTL_DAYS } from "./constants";
 import { hasRole, type Role } from "./roles";
 import { generateSessionToken, hashSessionToken } from "./token";
@@ -17,7 +18,7 @@ export type CurrentMember = {
   fullName: string;
   email: string | null;
   role: Role;
-  pool: "lab" | "studio" | "pkl" | null;
+  pool: Pool | null;
   dutyLabel: string | null;
   /** Staff with a PIN given by an admin must choose their own before using the app. */
   pinMustChange: boolean;
@@ -86,11 +87,19 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember | null> =>
   return member ?? null;
 });
 
-/** The signed-in member; sends them to /masuk, or to /ganti-pin while their PIN is one an admin gave them. */
+/** The signed-in member; sends them to /login, or to /change-pin while their PIN is one an admin gave them. */
 export async function requireMember(): Promise<CurrentMember> {
   const member = await getCurrentMember();
-  if (!member) redirect("/masuk");
-  if (member.pinMustChange) redirect("/ganti-pin");
+  if (!member) redirect("/login");
+  if (member.pinMustChange) redirect("/change-pin");
+  return member;
+}
+
+/** The signed-in member who must still replace an admin-given PIN; anyone else goes to /login or /. */
+export async function requirePendingPinChange(): Promise<CurrentMember> {
+  const member = await getCurrentMember();
+  if (!member) redirect("/login");
+  if (!member.pinMustChange) redirect("/");
   return member;
 }
 

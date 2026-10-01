@@ -4,7 +4,7 @@ import { generateLectureRoster, type GenArea, type GeneratorInput, type GenPatte
 import { isG2Floor, validateRoster } from "./validate";
 
 // A week shaped like the real lecture roster: 6 floor areas (2 in G2, 4 in G7)
-// × Pagi/Siang with one seat each, a studio with two seats per shift, and PKL
+// × morning/afternoon with one seat each, a studio with two seats per shift, and PKL
 // seats per building.
 const area = (id: number, name: string, building: "G2" | "G7", kind: GenArea["kind"]): GenArea => ({ id, name, building, kind });
 const STUDIO = area(1, "Studio G2", "G2", "studio");
@@ -18,13 +18,13 @@ const FLOORS = [
 ];
 const BUILDING_G2 = area(8, "Gedung 2", "G2", "building");
 const BUILDING_G7 = area(9, "Gedung 7", "G7", "building");
-const PAGI: GenShift = { id: 1, label: "Pagi" };
-const SIANG: GenShift = { id: 2, label: "Siang" };
+const MORNING: GenShift = { id: 1, label: "Pagi" };
+const AFTERNOON: GenShift = { id: 2, label: "Siang" };
 
 const SEATS: GenSeat[] = [
-  ...[PAGI, SIANG].map((shift) => ({ area: STUDIO, shift, capacity: 2 })),
-  ...FLOORS.flatMap((floor) => [PAGI, SIANG].map((shift) => ({ area: floor, shift, capacity: 1 }))),
-  ...[BUILDING_G2, BUILDING_G7].flatMap((building) => [PAGI, SIANG].map((shift) => ({ area: building, shift, capacity: 2 }))),
+  ...[MORNING, AFTERNOON].map((shift) => ({ area: STUDIO, shift, capacity: 2 })),
+  ...FLOORS.flatMap((floor) => [MORNING, AFTERNOON].map((shift) => ({ area: floor, shift, capacity: 1 }))),
+  ...[BUILDING_G2, BUILDING_G7].flatMap((building) => [MORNING, AFTERNOON].map((shift) => ({ area: building, shift, capacity: 2 }))),
 ];
 
 const DATES = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"];
@@ -34,16 +34,16 @@ function input(overrides: Partial<GeneratorInput> = {}): GeneratorInput {
   const patterns: GenPattern[] = [];
   for (let weekday = 1; weekday <= 5; weekday++) {
     // Half the lab team on each shift, swapping every day.
-    for (const id of LAB) patterns.push({ memberId: id, weekday, shiftId: (id + weekday) % 2 === 0 ? PAGI.id : SIANG.id, areaId: null });
-    patterns.push({ memberId: 13, weekday, shiftId: PAGI.id, areaId: STUDIO.id });
-    patterns.push({ memberId: 14, weekday, shiftId: PAGI.id, areaId: STUDIO.id });
-    patterns.push({ memberId: 15, weekday, shiftId: SIANG.id, areaId: STUDIO.id });
-    patterns.push({ memberId: 16, weekday, shiftId: SIANG.id, areaId: STUDIO.id });
+    for (const id of LAB) patterns.push({ memberId: id, weekday, shiftId: (id + weekday) % 2 === 0 ? MORNING.id : AFTERNOON.id, areaId: null });
+    patterns.push({ memberId: 13, weekday, shiftId: MORNING.id, areaId: STUDIO.id });
+    patterns.push({ memberId: 14, weekday, shiftId: MORNING.id, areaId: STUDIO.id });
+    patterns.push({ memberId: 15, weekday, shiftId: AFTERNOON.id, areaId: STUDIO.id });
+    patterns.push({ memberId: 16, weekday, shiftId: AFTERNOON.id, areaId: STUDIO.id });
     for (const id of [17, 18]) {
       patterns.push({
         memberId: id,
         weekday,
-        shiftId: weekday % 2 === 1 ? PAGI.id : SIANG.id,
+        shiftId: weekday % 2 === 1 ? MORNING.id : AFTERNOON.id,
         areaId: weekday % 2 === 1 ? BUILDING_G2.id : BUILDING_G7.id,
       });
     }
@@ -80,7 +80,7 @@ describe("generateLectureRoster", () => {
   it("keeps each lab member on the shift of their pattern", () => {
     for (const a of result.assignments.filter((a) => a.memberId <= 12)) {
       const weekday = DATES.indexOf(a.date) + 1;
-      expect(a.shiftId).toBe((a.memberId + weekday) % 2 === 0 ? PAGI.id : SIANG.id);
+      expect(a.shiftId).toBe((a.memberId + weekday) % 2 === 0 ? MORNING.id : AFTERNOON.id);
       expect(areaOf(a.areaId).kind).toBe("floor");
     }
   });
@@ -89,15 +89,15 @@ describe("generateLectureRoster", () => {
     for (const a of result.assignments.filter((a) => a.memberId >= 13 && a.memberId <= 16)) expect(a.areaId).toBe(STUDIO.id);
     const monday = result.assignments.filter((a) => a.date === DATES[0] && a.memberId >= 17);
     expect(monday.map((a) => [a.areaId, a.shiftId])).toEqual([
-      [BUILDING_G2.id, PAGI.id],
-      [BUILDING_G2.id, PAGI.id],
+      [BUILDING_G2.id, MORNING.id],
+      [BUILDING_G2.id, MORNING.id],
     ]);
   });
 
   it("fills every floor seat exactly once", () => {
     for (const date of DATES) {
       for (const floor of FLOORS) {
-        for (const shift of [PAGI, SIANG]) {
+        for (const shift of [MORNING, AFTERNOON]) {
           const seated = result.assignments.filter((a) => a.date === date && a.areaId === floor.id && a.shiftId === shift.id);
           expect(seated, `${date} ${floor.name} ${shift.label}`).toHaveLength(1);
         }
@@ -137,7 +137,7 @@ describe("generateLectureRoster", () => {
       {
         ...base,
         members: [...base.members, { id: 99, nickname: "Ekstra", pool: "lab", maxG2: 2 }],
-        patterns: [...base.patterns, { memberId: 99, weekday: 1, shiftId: (99 + 1) % 2 === 0 ? PAGI.id : SIANG.id, areaId: null }],
+        patterns: [...base.patterns, { memberId: 99, weekday: 1, shiftId: (99 + 1) % 2 === 0 ? MORNING.id : AFTERNOON.id, areaId: null }],
       },
       { seed: 1, attempts: 20 },
     );
@@ -163,11 +163,11 @@ describe("validateRoster", () => {
       locks: [{ memberId: 3, weekday: 2 }],
       holidays: new Set(),
       assignments: [
-        { date: DATES[0], areaId: g2.id, shiftId: PAGI.id, memberId: 1 },
-        { date: DATES[1], areaId: g2.id, shiftId: PAGI.id, memberId: 1 },
-        { date: DATES[0], areaId: g7.id, shiftId: PAGI.id, memberId: 2 },
-        { date: DATES[0], areaId: g7.id, shiftId: PAGI.id, memberId: 3 },
-        { date: DATES[1], areaId: g7.id, shiftId: SIANG.id, memberId: 3 },
+        { date: DATES[0], areaId: g2.id, shiftId: MORNING.id, memberId: 1 },
+        { date: DATES[1], areaId: g2.id, shiftId: MORNING.id, memberId: 1 },
+        { date: DATES[0], areaId: g7.id, shiftId: MORNING.id, memberId: 2 },
+        { date: DATES[0], areaId: g7.id, shiftId: MORNING.id, memberId: 3 },
+        { date: DATES[1], areaId: g7.id, shiftId: AFTERNOON.id, memberId: 3 },
       ],
     });
     const messages = violations.map((v) => `${v.severity}: ${v.message}`);

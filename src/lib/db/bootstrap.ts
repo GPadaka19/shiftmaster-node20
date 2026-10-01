@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
+import { addDaysIso } from "@/lib/time";
 import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, normalizeNickname } from "@/lib/auth/pin";
 import type { Db } from "./client";
-import { AREAS, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
-import { areas, auditLog, members, rooms, seatTemplates, settings, shifts } from "./schema";
+import { AREAS, FIRST_ROSTER, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
+import { areas, assignments, auditLog, members, rooms, rosterWeeks, seatTemplates, settings, shifts } from "./schema";
 
 // What every install needs before anyone can sign in. Runs at server start in
 // production (src/instrumentation.ts) and from `pnpm db:seed`. Only adds rows
@@ -11,38 +12,35 @@ import { areas, auditLog, members, rooms, seatTemplates, settings, shifts } from
 
 /** Areas, rooms, shifts, seats and settings from seed-data.ts. */
 export async function seedConfiguration(db: Db) {
-  for (const area of AREAS) {
-    await db.insert(areas).values(area).onConflictDoNothing({ target: areas.code });
-  }
+  await db.insert(areas).values(AREAS).onConflictDoNothing({ target: areas.code });
   const areaId = new Map((await db.select({ id: areas.id, code: areas.code }).from(areas)).map((a) => [a.code, a.id]));
 
-  for (const room of ROOMS) {
-    const values = {
-      code: room.code,
-      building: room.building,
-      floor: room.floor,
-      kind: room.kind,
-      areaId: room.area ? areaId.get(room.area)! : null,
-      visible: room.visible,
-    };
-    await db.insert(rooms).values(values).onConflictDoNothing({ target: rooms.code });
-  }
+  await db
+    .insert(rooms)
+    .values(
+      ROOMS.map((room) => ({
+        code: room.code,
+        building: room.building,
+        floor: room.floor,
+        kind: room.kind,
+        areaId: room.area ? areaId.get(room.area)! : null,
+        visible: room.visible,
+      })),
+    )
+    .onConflictDoNothing({ target: rooms.code });
 
-  for (const shift of SHIFTS) {
-    await db.insert(shifts).values(shift).onConflictDoNothing({ target: shifts.code });
-  }
+  await db.insert(shifts).values(SHIFTS).onConflictDoNothing({ target: shifts.code });
   const shiftId = new Map((await db.select({ id: shifts.id, code: shifts.code }).from(shifts)).map((s) => [s.code, s.id]));
 
-  for (const seat of SEATS) {
-    await db
-      .insert(seatTemplates)
-      .values({ areaId: areaId.get(seat.area)!, shiftId: shiftId.get(seat.shift)!, capacity: seat.capacity })
-      .onConflictDoNothing();
-  }
+  await db
+    .insert(seatTemplates)
+    .values(SEATS.map((seat) => ({ areaId: areaId.get(seat.area)!, shiftId: shiftId.get(seat.shift)!, capacity: seat.capacity })))
+    .onConflictDoNothing();
 
-  for (const [key, value] of Object.entries(SETTINGS)) {
-    await db.insert(settings).values({ key, value }).onConflictDoNothing();
-  }
+  await db
+    .insert(settings)
+    .values(Object.entries(SETTINGS).map(([key, value]) => ({ key, value })))
+    .onConflictDoNothing();
 
   console.info(`[seed] ${AREAS.length} areas, ${ROOMS.length} rooms, ${SHIFTS.length} shifts, ${SEATS.length} seat templates`);
 }
@@ -115,4 +113,50 @@ export async function seedMembers(db: Db) {
 
   await db.insert(settings).values({ key: MEMBERS_SEEDED, value: new Date().toISOString() }).onConflictDoNothing();
   console.info(`[seed] ${added} of ${MEMBERS.length} starting members added`);
+}
+
+const FIRST_ROSTER_SEEDED = "first_roster_seeded_at";
+
+/**
+ * The go-live week's roster from seed-data.ts, published. Runs once per
+ * install and never touches a week that already exists.
+ */
+export async function seedFirstRoster(db: Db) {
+  const [done] = await db.select({ key: settings.key }).from(settings).where(eq(settings.key, FIRST_ROSTER_SEEDED));
+  if (done) return;
+
+  const [existing] = await db.select({ id: rosterWeeks.id }).from(rosterWeeks).where(eq(rosterWeeks.weekStart, FIRST_ROSTER.weekStart));
+  if (!existing) {
+    const memberId = new Map((await db.select({ id: members.id, nickname: members.nicknameNormalized }).from(members)).map((m) => [m.nickname, m.id]));
+    const areaId = new Map((await db.select({ id: areas.id, code: areas.code }).from(areas)).map((a) => [a.code, a.id]));
+    const shiftId = new Map((await db.select({ id: shifts.id, code: shifts.code }).from(shifts)).map((s) => [s.code, s.id]));
+    const idOf = (map: Map<string, number>, key: string) => {
+      const id = map.get(key);
+      if (id === undefined) throw new Error(`[seed] first roster refers to unknown "${key}"`);
+      return id;
+    };
+
+    await db.transaction(async (tx) => {
+      const [week] = await tx
+        .insert(rosterWeeks)
+        .values({ weekStart: FIRST_ROSTER.weekStart, mode: "lecture", status: "published", source: "manual", publishedAt: new Date() })
+        .returning({ id: rosterWeeks.id });
+      await tx.insert(assignments).values(
+        FIRST_ROSTER.rows.flatMap((row) =>
+          row.days.map((nickname, day) => ({
+            rosterWeekId: week.id,
+            date: addDaysIso(FIRST_ROSTER.weekStart, day),
+            areaId: idOf(areaId, row.area),
+            shiftId: idOf(shiftId, row.shift),
+            memberId: idOf(memberId, normalizeNickname(nickname)),
+            position: row.position ?? 1,
+          })),
+        ),
+      );
+      await tx.insert(auditLog).values({ actorId: null, action: "roster.seed", subject: `roster_week:${FIRST_ROSTER.weekStart}` });
+    });
+    console.info(`[seed] first roster for week ${FIRST_ROSTER.weekStart} published`);
+  }
+
+  await db.insert(settings).values({ key: FIRST_ROSTER_SEEDED, value: new Date().toISOString() }).onConflictDoNothing();
 }

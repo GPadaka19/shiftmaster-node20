@@ -1,17 +1,21 @@
-import { Clock, Sun, Sunset, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { SlotStrip } from "@/components/schedule/session";
+import { ShiftIcon, shiftTime } from "@/components/shift";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Mode } from "@/lib/period/resolve";
 import type { AreaInfo } from "@/lib/rooms/group";
 import { rosterDay, weekDutiesOf, type RosterWeek, type ShiftInfo } from "@/lib/roster/view";
 import type { SlotTiming } from "@/lib/schedule/slots";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
 import { WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/time";
 
-const SHIFT_ICON: Record<string, LucideIcon> = { pagi: Sun, siang: Sunset };
-
 type Slot = { area: AreaInfo; shift: ShiftInfo };
 type Holidays = Map<string, { name: string }>;
+
+/** In lecture weeks the building areas are PKL seats. */
+const isPklArea = (area: AreaInfo, mode: Mode) => mode === "lecture" && area.kind === "building";
+
+const areaTitle = (area: AreaInfo, mode: Mode) => (isPklArea(area, mode) ? `PKL · ${area.name}` : area.name);
 
 function Name({ nickname, mine }: { nickname: string; mine: boolean }) {
   return (
@@ -23,14 +27,11 @@ function Name({ nickname, mine }: { nickname: string; mine: boolean }) {
 }
 
 function ShiftLabel({ shift }: { shift: ShiftInfo }) {
-  const Icon = SHIFT_ICON[shift.code] ?? Clock;
   return (
     <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-      <Icon className="size-4" aria-hidden="true" />
+      <ShiftIcon code={shift.code} className="size-4" aria-hidden="true" />
       <span>{shift.label}</span>
-      <span className="text-xs tabular-nums">
-        {shift.start}–{shift.end}
-      </span>
+      <span className="text-xs tabular-nums">{shiftTime(shift)}</span>
     </span>
   );
 }
@@ -81,7 +82,7 @@ export function RosterDayView({
 }) {
   const areas = rosterDay(week, date, slots).filter(
     // PKL building seats only matter in lecture weeks when someone sits in them.
-    (day) => week.mode === "maintenance" || day.area.kind !== "building" || day.shifts.some((s) => s.members.length > 0),
+    (day) => !isPklArea(day.area, week.mode) || day.shifts.some((s) => s.members.length > 0),
   );
 
   return (
@@ -91,9 +92,7 @@ export function RosterDayView({
         return (
           <Card key={area.id} size="sm">
             <CardHeader>
-              <CardTitle>
-                {area.kind === "building" && week.mode === "lecture" ? `PKL · ${area.name}` : area.name}
-              </CardTitle>
+              <CardTitle>{areaTitle(area, week.mode)}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 text-sm">
               {shifts.map(({ shift, members }) => (
@@ -143,7 +142,6 @@ export function RosterTable({
   today: string;
 }) {
   const days = dates.map((date) => rosterDay(week, date, slots));
-  const isPklArea = (area: AreaInfo) => week.mode === "lecture" && area.kind === "building";
 
   // Every day has the same areas and shifts in the same order, so index across days.
   const areaRows = days[0]
@@ -152,7 +150,7 @@ export function RosterTable({
       shifts: areaDay.shifts
         .map(({ shift }, shiftIndex) => ({ shift, cells: days.map((day) => day[areaIndex].shifts[shiftIndex].members) }))
         // PKL seats only show for shifts someone actually works this week.
-        .filter((row) => !isPklArea(areaDay.area) || row.cells.some((cell) => cell.length > 0)),
+        .filter((row) => !isPklArea(areaDay.area, week.mode) || row.cells.some((cell) => cell.length > 0)),
     }))
     .filter((areaRow) => areaRow.shifts.length > 0);
 
@@ -192,7 +190,7 @@ export function RosterTable({
                     rowSpan={shifts.length}
                     className="sticky left-0 z-10 bg-card px-3 py-2 text-left align-top font-medium"
                   >
-                    {isPklArea(area) ? `PKL · ${area.name}` : area.name}
+                    {areaTitle(area, week.mode)}
                   </th>
                 )}
                 <td className="px-3 py-2 align-top whitespace-nowrap text-muted-foreground">{row.shift.label}</td>

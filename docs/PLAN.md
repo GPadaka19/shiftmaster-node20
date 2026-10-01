@@ -49,7 +49,7 @@ Referensi sistem lama (read-only, jangan diubah):
 | Database | PostgreSQL + Drizzle ORM + drizzle-kit (migrasi skema) |
 | Validasi | zod |
 | Tanggal | date-fns v4 + `@date-fns/tz` (semua hitungan di `Asia/Jakarta`) |
-| Auth | Sesi buatan sendiri (desainnya diambil dari Go): token acak, disimpan sebagai hash SHA-256, cookie HttpOnly, berlaku 30 hari. PIN 4–8 angka, bcrypt. Admin: verifikasi Google ID token (`google-auth-library`). |
+| Auth | Sesi buatan sendiri (desainnya diambil dari Go): token acak, disimpan sebagai hash SHA-256, cookie HttpOnly, berlaku 30 hari. PIN 6–8 angka, bcrypt. PIN awal `123456` (atau PIN dari admin) wajib diganti saat login pertama (`/ganti-pin`). Admin: verifikasi Google ID token (`google-auth-library`). |
 | Google Sheets | `google-auth-library` (OAuth2 + refresh token) + REST `values:batchGet` |
 | Test | Vitest untuk logika murni (parser, generator, validasi, mode). Playwright untuk smoke test belakangan. |
 | Deploy | Docker (`output: "standalone"`) + container Postgres, pipeline VPS/Traefik, branch `prod` |
@@ -191,6 +191,8 @@ Aturan (desainnya diambil dari Go):
 
 - Admin/superadmin wajib login Google. Staf login nickname + PIN.
 - Ganti role, status aktif, atau PIN mencabut semua sesi anggota itu.
+- PIN yang diberikan admin (termasuk PIN awal `123456`) ditandai `pin_must_change`. Selama tanda itu ada,
+  `requireMember()` mengarahkan staf ke `/ganti-pin`, jadi tidak ada halaman atau aksi lain yang bisa dipakai.
 - Superadmin tidak bisa menurunkan atau menonaktifkan dirinya sendiri.
 
 ### Tempat
@@ -344,7 +346,7 @@ Navigasi: mobile = bottom bar 4 item, desktop = sidebar kiri. Badge mode di head
 
 | Halaman | Isi |
 |---|---|
-| `/admin/anggota` | Tambah/ubah anggota, role, pool, status aktif, set/hapus PIN. Semua tercatat di audit log. |
+| `/admin/anggota` | Tambah/ubah anggota, role, pool, status aktif, mulai bertugas, atur PIN atau reset ke PIN awal. Semua tercatat di audit log. |
 
 ### Login `/masuk`
 

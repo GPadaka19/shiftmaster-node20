@@ -78,7 +78,9 @@ Urutannya penting, karena setiap langkah dipakai langkah berikutnya.
 1. **Anggota:**
    - Tambah admin (peran Admin + email Google).
    - Tambah semua staf: pool Lab, Studio, atau PKL.
-   - Atur PIN tiap staf dan bagikan secara pribadi.
+   - Staf (yang di-seed maupun yang ditambahkan) mulai dengan PIN awal `123456` dan **wajib membuat PIN sendiri**
+     saat login pertama. Beri tahu staf secara langsung; jangan tulis PIN awal di grup publik.
+   - Staf yang lupa PIN: buka detailnya di Anggota → **Reset ke PIN awal**.
 2. **Kalender:**
    - Isi periode semester berjalan (Masa Kuliah) dan libur semester berikutnya.
    - Isi hari libur nasional dan kampus.

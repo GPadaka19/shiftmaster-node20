@@ -22,7 +22,8 @@ Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") 
 - `pnpm db:seed` juga membuat:
   - superadmin pertama dari `BOOTSTRAP_SUPERADMIN_EMAIL`;
   - tim awal (admin dan staf) dari `MEMBERS` di `src/lib/db/seed-data.ts`, **sekali saja per database**.
-    Setelah itu, anggota dikelola dari halaman Anggota, termasuk PIN staf.
+    Setelah itu, anggota dikelola dari halaman Anggota. Staf mulai dengan PIN awal `123456` dan wajib
+    membuat PIN sendiri saat login pertama.
 - `pnpm db:seed --demo` (development saja) menambah:
   - akun staf `demo` untuk mencoba login PIN (PIN-nya tertulis di `src/lib/db/seed.ts`);
   - contoh pola Pagi/Siang untuk staf yang belum punya pola. Roster dibuat dari halaman admin Roster.

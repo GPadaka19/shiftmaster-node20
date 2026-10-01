@@ -1,15 +1,27 @@
 import "server-only";
-import { and, count, desc, eq, gt, inArray, lte, or } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { and, desc, eq, exists, gt, inArray, lte, or, sql, type SQL } from "drizzle-orm";
+import { alias, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { cache } from "react";
 import { writeAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
-import { areas, assignments, memberG2Locks, members, rosterWeeks, shifts, swapRequests } from "@/lib/db/schema";
-import { getDefaultMaxG2, getEditorAssignments, seatsFor, weekDates } from "@/lib/roster/service";
-import { g2RuleFor } from "@/lib/roster/newcomer";
+import type { Db, Executor } from "@/lib/db/client";
+import { areas, assignments, members, rosterWeeks, shifts, swapRequests } from "@/lib/db/schema";
+import { getEditorAssignments, seatsFor } from "@/lib/roster/service";
+import { loadWeekRules } from "@/lib/roster/week-rules";
 import { validateRoster } from "@/lib/roster/validate";
-import { addDaysIso, todayIso } from "@/lib/time";
-import { ACTIVE_STATUSES, isPastDeadline, seatBlockReason, seatsChanged, swapBlockReason, type SwapSide, type SwapStatus } from "./rules";
+import { addDaysIso, todayIso, weekDates } from "@/lib/time";
+import {
+  ACTIVE_STATUSES,
+  FINISHED_STATUSES,
+  isPastDeadline,
+  poolCanSwap,
+  seatBlockReason,
+  seatLabel,
+  seatsChanged,
+  swapBlockReason,
+  type SwapSide,
+  type SwapStatus,
+} from "./rules";
 
 // Shift swaps: the requester asks, the target accepts or declines, then one
 // admin approves (seats are exchanged) or rejects. Callers check sign-in and
@@ -18,23 +30,33 @@ import { ACTIVE_STATUSES, isPastDeadline, seatBlockReason, seatsChanged, swapBlo
 /** A rule was broken; the message is meant for the user. */
 export class SwapError extends Error {}
 
-type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 const OVERDUE_NOTE = "Lewat batas waktu (H-1 pukul 23.59).";
 const CHANGED_NOTE = "Roster berubah setelah permintaan dibuat.";
+
+/** Requests still in progress (they lock both seats). */
+const activeSwap = inArray(swapRequests.status, [...ACTIVE_STATUSES]);
+const finishedSwap = inArray(swapRequests.status, [...FINISHED_STATUSES]);
+
+/** Requests on any of these seats: assignment ids, or the assignment column of an outer query. */
+function touchesSeats(ids: number[] | AnyPgColumn) {
+  return Array.isArray(ids)
+    ? or(inArray(swapRequests.requesterAssignmentId, ids), inArray(swapRequests.targetAssignmentId, ids))
+    : or(eq(swapRequests.requesterAssignmentId, ids), eq(swapRequests.targetAssignmentId, ids));
+}
 
 /** Closes active requests whose day has started. Cheap; called before reads and writes. */
 export async function expireOverdueSwaps(now: Date = new Date()) {
   await db
     .update(swapRequests)
     .set({ status: "expired", note: OVERDUE_NOTE, decidedAt: now })
-    .where(and(inArray(swapRequests.status, [...ACTIVE_STATUSES]), lte(swapRequests.date, todayIso(now))));
+    .where(and(activeSwap, lte(swapRequests.date, todayIso(now))));
 }
 
-export type SeatInfo = SwapSide & { nickname: string; active: boolean; areaName: string; shiftLabel: string; position: number };
+/** A seat, plus whether it is tied up in an active request. */
+export type SeatInfo = SwapSide & { nickname: string; active: boolean; areaName: string; shiftLabel: string; position: number; locked: boolean };
 
-async function loadSeat(executor: Executor | typeof db, assignmentId: number): Promise<SeatInfo | null> {
-  const [row] = await executor
+async function loadSeats(executor: Executor | Db, where: SQL | undefined, orderBy?: AnyPgColumn): Promise<SeatInfo[]> {
+  const query = executor
     .select({
       assignmentId: assignments.id,
       memberId: assignments.memberId,
@@ -50,75 +72,65 @@ async function loadSeat(executor: Executor | typeof db, assignmentId: number): P
       weekStatus: rosterWeeks.status,
       areaName: areas.name,
       shiftLabel: shifts.label,
+      locked: exists(
+        executor.select({ id: swapRequests.id }).from(swapRequests).where(and(activeSwap, touchesSeats(assignments.id))),
+      ).mapWith(Boolean),
     })
     .from(assignments)
     .innerJoin(members, eq(assignments.memberId, members.id))
     .innerJoin(rosterWeeks, eq(assignments.rosterWeekId, rosterWeeks.id))
     .innerJoin(areas, eq(assignments.areaId, areas.id))
     .innerJoin(shifts, eq(assignments.shiftId, shifts.id))
-    .where(eq(assignments.id, assignmentId));
-  if (!row) return null;
-  const { weekStatus, ...seat } = row;
-  return { ...seat, weekPublished: weekStatus === "published" };
+    .where(where);
+  const rows = await (orderBy ? query.orderBy(orderBy) : query);
+  return rows.map(({ weekStatus, ...seat }) => ({ ...seat, weekPublished: weekStatus === "published" }));
 }
 
-/** Assignment ids tied up in an active request. */
-async function lockedAssignmentIds(executor: Executor | typeof db, ids: number[]): Promise<Set<number>> {
-  if (ids.length === 0) return new Set();
-  const rows = await executor
-    .select({ a: swapRequests.requesterAssignmentId, b: swapRequests.targetAssignmentId })
-    .from(swapRequests)
-    .where(
-      and(
-        inArray(swapRequests.status, [...ACTIVE_STATUSES]),
-        or(inArray(swapRequests.requesterAssignmentId, ids), inArray(swapRequests.targetAssignmentId, ids)),
-      ),
-    );
-  return new Set(rows.flatMap((r) => [r.a, r.b]).filter((id): id is number => id !== null));
+async function loadSeat(executor: Executor | Db, assignmentId: number): Promise<SeatInfo | null> {
+  const [seat] = await loadSeats(executor, eq(assignments.id, assignmentId));
+  return seat ?? null;
 }
 
 /** The member's seats they can still offer: published lecture weeks, from tomorrow, two weeks ahead. */
 export async function myTradableSeats(memberId: number, now: Date = new Date()) {
   const today = todayIso(now);
-  const rows = await db
-    .select({ id: assignments.id })
-    .from(assignments)
-    .innerJoin(rosterWeeks, eq(assignments.rosterWeekId, rosterWeeks.id))
-    .where(
-      and(
-        eq(assignments.memberId, memberId),
-        eq(rosterWeeks.status, "published"),
-        eq(rosterWeeks.mode, "lecture"),
-        gt(assignments.date, today),
-        lte(assignments.date, addDaysIso(today, 14)),
-      ),
-    )
-    .orderBy(assignments.date);
-  const seats = (await Promise.all(rows.map((r) => loadSeat(db, r.id)))).filter((s): s is SeatInfo => s !== null);
-  const locked = await lockedAssignmentIds(db, seats.map((s) => s.assignmentId));
-  return seats
-    .filter((s) => s.pool === "lab" || s.pool === "studio")
-    .map((s) => ({ ...s, locked: locked.has(s.assignmentId) }));
+  const seats = await loadSeats(
+    db,
+    and(
+      eq(assignments.memberId, memberId),
+      eq(rosterWeeks.status, "published"),
+      eq(rosterWeeks.mode, "lecture"),
+      gt(assignments.date, today),
+      lte(assignments.date, addDaysIso(today, 14)),
+    ),
+    assignments.date,
+  );
+  return seats.filter((s) => poolCanSwap(s.pool));
 }
+
+const mySeat = alias(assignments, "my_seat");
 
 /** Who the member could trade `assignmentId` with. */
 export async function swapCandidates(memberId: number, assignmentId: number, now: Date = new Date()) {
-  const mine = await loadSeat(db, assignmentId);
+  // Every seat on the same roster day as `assignmentId`, that seat included.
+  const sameDay = await loadSeats(
+    db,
+    exists(
+      db
+        .select({ id: mySeat.id })
+        .from(mySeat)
+        .where(
+          and(eq(mySeat.id, assignmentId), eq(mySeat.rosterWeekId, assignments.rosterWeekId), eq(mySeat.date, assignments.date)),
+        ),
+    ),
+  );
+  const mine = sameDay.find((s) => s.assignmentId === assignmentId);
   if (!mine || mine.memberId !== memberId) return null;
 
-  const sameDay = await db
-    .select({ id: assignments.id })
-    .from(assignments)
-    .where(and(eq(assignments.rosterWeekId, mine.rosterWeekId), eq(assignments.date, mine.date)));
-  const others = (await Promise.all(sameDay.map((r) => loadSeat(db, r.id))))
-    .filter((s): s is SeatInfo => s !== null && s.active)
-    .filter((s) => swapBlockReason(mine, s, now) === null);
-  const locked = await lockedAssignmentIds(db, [mine.assignmentId, ...others.map((s) => s.assignmentId)]);
-
   return {
-    mine: { ...mine, locked: locked.has(mine.assignmentId), blockReason: seatBlockReason(mine, now) },
-    candidates: others
-      .map((s) => ({ ...s, locked: locked.has(s.assignmentId) }))
+    mine: { ...mine, blockReason: seatBlockReason(mine, now) },
+    candidates: sameDay
+      .filter((s) => s.active && swapBlockReason(mine, s, now) === null)
       .sort((a, b) => a.nickname.localeCompare(b.nickname)),
   };
 }
@@ -147,7 +159,7 @@ export async function requestSwap(input: {
 
     const blocked = swapBlockReason(mine, theirs, now);
     if (blocked) throw new SwapError(blocked);
-    if ((await lockedAssignmentIds(tx, [mine.assignmentId, theirs.assignmentId])).size > 0) {
+    if (mine.locked || theirs.locked) {
       throw new SwapError("Salah satu shift ini sedang diproses permintaan lain. Tunggu sampai selesai.");
     }
 
@@ -306,12 +318,7 @@ export async function decideSwap(input: { requestId: number; adminId: number; ap
     await tx
       .update(swapRequests)
       .set({ status: "expired", note: "Shift sudah ditukar lewat permintaan lain.", decidedAt: now })
-      .where(
-        and(
-          inArray(swapRequests.status, [...ACTIVE_STATUSES]),
-          or(inArray(swapRequests.requesterAssignmentId, seatIds), inArray(swapRequests.targetAssignmentId, seatIds)),
-        ),
-      );
+      .where(and(activeSwap, touchesSeats(seatIds)));
 
     const [week] = await tx.select({ weekStart: rosterWeeks.weekStart }).from(rosterWeeks).where(eq(rosterWeeks.id, request.rosterWeekId));
     await writeAudit(
@@ -397,29 +404,31 @@ async function listSwaps(where: ReturnType<typeof and>, limit: number): Promise<
     note: r.note,
     createdAt: r.createdAt,
     decidedAt: r.decidedAt,
-    requester: { id: r.requesterId, nickname: r.requesterName, seat: `${r.requesterShift} · ${r.requesterArea}`, shiftCode: r.requesterShiftCode },
-    target: { id: r.targetId, nickname: r.targetName, seat: `${r.targetShift} · ${r.targetArea}`, shiftCode: r.targetShiftCode },
+    requester: {
+      id: r.requesterId,
+      nickname: r.requesterName,
+      seat: seatLabel({ shiftLabel: r.requesterShift, areaName: r.requesterArea }),
+      shiftCode: r.requesterShiftCode,
+    },
+    target: {
+      id: r.targetId,
+      nickname: r.targetName,
+      seat: seatLabel({ shiftLabel: r.targetShift, areaName: r.targetArea }),
+      shiftCode: r.targetShiftCode,
+    },
     decidedBy: r.decidedBy,
   }));
 }
 
-const active = inArray(swapRequests.status, [...ACTIVE_STATUSES]);
-
 export async function swapsForMember(memberId: number) {
   await expireOverdueSwaps();
   const mine = or(eq(swapRequests.requesterId, memberId), eq(swapRequests.targetId, memberId));
-  const [incoming, outgoing, history] = await Promise.all([
+  const [incoming, outgoing, waitingForAdmin, history] = await Promise.all([
     listSwaps(and(eq(swapRequests.targetId, memberId), eq(swapRequests.status, "awaiting_target")), 50),
-    listSwaps(and(eq(swapRequests.requesterId, memberId), active), 50),
-    listSwaps(
-      and(
-        mine,
-        inArray(swapRequests.status, ["approved", "rejected", "declined", "cancelled", "expired"]),
-      ),
-      20,
-    ),
+    listSwaps(and(eq(swapRequests.requesterId, memberId), activeSwap), 50),
+    listSwaps(and(eq(swapRequests.targetId, memberId), eq(swapRequests.status, "awaiting_admin")), 50),
+    listSwaps(and(mine, finishedSwap), 20),
   ]);
-  const waitingForAdmin = await listSwaps(and(eq(swapRequests.targetId, memberId), eq(swapRequests.status, "awaiting_admin")), 50);
   return { incoming, outgoing: [...outgoing, ...waitingForAdmin].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()), history };
 }
 
@@ -428,22 +437,23 @@ export async function swapsForAdmin() {
   const [awaitingAdmin, awaitingTarget, history] = await Promise.all([
     listSwaps(eq(swapRequests.status, "awaiting_admin"), 100),
     listSwaps(eq(swapRequests.status, "awaiting_target"), 100),
-    listSwaps(inArray(swapRequests.status, ["approved", "rejected", "declined", "cancelled", "expired"]), 30),
+    listSwaps(finishedSwap, 30),
   ]);
   return { awaitingAdmin, awaitingTarget, history };
 }
 
 /** Badge counts: requests waiting on this member, and (for admins) on any admin. */
 export const swapCounts = cache(async (memberId: number, isAdmin: boolean) => {
-  const upcoming = gt(swapRequests.date, todayIso());
-  const [incoming] = await db
-    .select({ n: count() })
+  const incoming = and(eq(swapRequests.targetId, memberId), eq(swapRequests.status, "awaiting_target"));
+  const forAdmin = eq(swapRequests.status, "awaiting_admin");
+  const [counts] = await db
+    .select({
+      incoming: sql`count(*) filter (where ${incoming})`.mapWith(Number),
+      awaitingAdmin: sql`count(*) filter (where ${forAdmin})`.mapWith(Number),
+    })
     .from(swapRequests)
-    .where(and(eq(swapRequests.targetId, memberId), eq(swapRequests.status, "awaiting_target"), upcoming));
-  const [forAdmin] = isAdmin
-    ? await db.select({ n: count() }).from(swapRequests).where(and(eq(swapRequests.status, "awaiting_admin"), upcoming))
-    : [{ n: 0 }];
-  return { incoming: incoming.n, awaitingAdmin: forAdmin.n };
+    .where(and(gt(swapRequests.date, todayIso()), isAdmin ? or(incoming, forAdmin) : incoming));
+  return { incoming: counts.incoming, awaitingAdmin: isAdmin ? counts.awaitingAdmin : 0 };
 });
 
 /**
@@ -456,18 +466,12 @@ export async function swapPreviewWarnings(requestId: number): Promise<string[]> 
   const [week] = await db.select().from(rosterWeeks).where(eq(rosterWeeks.id, request.rosterWeekId));
   if (!week || week.mode !== "lecture") return [];
 
-  const [rows, seats, locks, defaultMaxG2, team] = await Promise.all([
+  // Cached per request, so an admin page previewing many requests in one week loads the rules once.
+  const [rows, seats, { members: memberInfo, locks }] = await Promise.all([
     getEditorAssignments(week.id),
     seatsFor("lecture"),
-    db.select().from(memberG2Locks),
-    getDefaultMaxG2(),
-    db
-      .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn, active: members.active })
-      .from(members),
+    loadWeekRules(week.weekStart, "all"),
   ]);
-  const memberInfo = new Map(
-    team.map((m) => [m.id, { nickname: m.nickname, active: m.active, ...g2RuleFor(m, week.weekStart, defaultMaxG2) }]),
-  );
   const check = (list: typeof rows) =>
     validateRoster({ mode: "lecture", dates: weekDates(week.weekStart), seats, members: memberInfo, locks, holidays: new Set(), assignments: list })
       .filter((v) => v.severity !== "info")

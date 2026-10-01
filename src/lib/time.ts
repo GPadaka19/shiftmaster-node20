@@ -18,9 +18,21 @@ export function todayIso(now: Date = new Date()): string {
 
 /** Monday of the week containing `isoDate`. */
 export function weekStartIso(isoDate: string): string {
-  const date = parseISO(isoDate);
-  const isoWeekday = date.getDay() === 0 ? 7 : date.getDay();
-  return format(addDays(date, 1 - isoWeekday), "yyyy-MM-dd");
+  return addDaysIso(isoDate, 1 - isoWeekday(isoDate));
+}
+
+/** Monday to Friday of the week starting `weekStart`. */
+export function weekDates(weekStart: string): string[] {
+  return [0, 1, 2, 3, 4].map((offset) => addDaysIso(weekStart, offset));
+}
+
+/**
+ * A weekday (1–5) from a query param, or `fallback` when it is missing or out
+ * of range. Pages pass today's weekday on weekdays and Monday otherwise.
+ */
+export function clampWeekday(param: unknown, fallback: number): number {
+  const day = Number(param);
+  return Number.isInteger(day) && day >= 1 && day <= 5 ? day : fallback;
 }
 
 /** "Selasa, 30 September 2026" */
@@ -48,7 +60,7 @@ export function timeOfDay(moment: Date = new Date()): string {
   return format(nowInJakarta(moment), "HH:mm");
 }
 
-/** ISO weekday of "yyyy-MM-dd": 1 = Senin … 7 = Minggu. */
+/** ISO weekday of "yyyy-MM-dd": 1 = Monday … 7 = Sunday. */
 export function isoWeekday(isoDate: string): number {
   const day = parseISO(isoDate).getDay();
   return day === 0 ? 7 : day;

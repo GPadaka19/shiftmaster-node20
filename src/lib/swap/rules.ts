@@ -1,4 +1,6 @@
 import { TZDate } from "@date-fns/tz";
+import type { Pool } from "@/lib/members/labels";
+import type { Mode } from "@/lib/period/resolve";
 import { TIME_ZONE } from "@/lib/time";
 
 // Rules for trading seats. Pure, so they are tested on their own and shared by
@@ -8,6 +10,12 @@ export type SwapStatus = "awaiting_target" | "awaiting_admin" | "approved" | "re
 
 /** Statuses that still lock both assignments: one active request per seat. */
 export const ACTIVE_STATUSES: readonly SwapStatus[] = ["awaiting_target", "awaiting_admin"];
+
+/** Statuses of settled requests, shown as history. */
+export const FINISHED_STATUSES: readonly SwapStatus[] = ["approved", "rejected", "declined", "cancelled", "expired"];
+
+/** Longest reason (requester) or note (admin) kept with a request. */
+export const SWAP_TEXT_MAX_LENGTH = 300;
 
 export const STATUS_LABEL: Record<SwapStatus, string> = {
   awaiting_target: "Menunggu rekan",
@@ -23,15 +31,30 @@ export const STATUS_LABEL: Record<SwapStatus, string> = {
 export type SwapSide = {
   assignmentId: number;
   memberId: number;
-  pool: "lab" | "studio" | "pkl" | null;
+  pool: Pool | null;
   /** "yyyy-MM-dd" */
   date: string;
   rosterWeekId: number;
-  weekMode: "lecture" | "maintenance";
+  weekMode: Mode;
   weekPublished: boolean;
   areaId: number;
   shiftId: number;
 };
+
+/** Only lab and studio staff trade seats; PKL duties and members outside the roster cannot. */
+export function poolCanSwap(pool: Pool | null): pool is "lab" | "studio" {
+  return pool === "lab" || pool === "studio";
+}
+
+/** Whether "Tukar shift" is offered at all: lab and studio staff, during lecture weeks. */
+export function swapAvailable(mode: Mode, pool: Pool | null): boolean {
+  return mode === "lecture" && poolCanSwap(pool);
+}
+
+/** "Pagi · G7 Lantai 3" */
+export function seatLabel(seat: { shiftLabel: string; areaName: string }): string {
+  return `${seat.shiftLabel} · ${seat.areaName}`;
+}
 
 /**
  * Requests must be settled before the day starts: the deadline is the start of
@@ -50,8 +73,7 @@ export function isPastDeadline(date: string, now: Date): boolean {
 export function seatBlockReason(seat: SwapSide, now: Date): string | null {
   if (!seat.weekPublished) return "Roster minggu ini belum terbit.";
   if (seat.weekMode !== "lecture") return "Tukar shift hanya untuk roster masa kuliah (Pagi ↔ Siang).";
-  if (seat.pool === "pkl") return "Tugas PKL tidak bisa ditukar.";
-  if (!seat.pool) return "Anggota ini tidak masuk roster.";
+  if (!poolCanSwap(seat.pool)) return seat.pool === "pkl" ? "Tugas PKL tidak bisa ditukar." : "Anggota ini tidak masuk roster.";
   if (isPastDeadline(seat.date, now)) return "Sudah lewat batas waktu: tukar shift harus tuntas paling lambat H-1 pukul 23.59.";
   return null;
 }

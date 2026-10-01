@@ -1,8 +1,7 @@
-import { redirect } from "next/navigation";
 import { signOut } from "@/app/(app)/account/actions";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { getCurrentMember } from "@/lib/auth/session";
+import { requirePendingPinChange } from "@/lib/auth/session";
 import { ChoosePinForm } from "./choose-pin-form";
 
 export const metadata = { title: "Buat PIN" };
@@ -10,9 +9,7 @@ export const metadata = { title: "Buat PIN" };
 // Every page and Server Action sends a member here (via requireMember) until
 // they replace the PIN an admin gave them.
 export default async function ChoosePinPage() {
-  const member = await getCurrentMember();
-  if (!member) redirect("/login");
-  if (!member.pinMustChange) redirect("/");
+  const member = await requirePendingPinChange();
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">

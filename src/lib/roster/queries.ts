@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { areas, assignments, members, rosterWeeks, seatTemplates, shifts } from "@/lib/db/schema";
+import type { Mode } from "@/lib/period/resolve";
 import type { AreaInfo } from "@/lib/rooms/group";
 import type { RosterWeek, ShiftInfo } from "./view";
 
@@ -45,7 +46,7 @@ export const getPublishedRosterWeek = cache(async (weekStart: string): Promise<R
 });
 
 /** Every area and shift that has seats in `mode`, i.e. what a roster day can contain. */
-export const getRosterSlots = cache(async (mode: "lecture" | "maintenance") => {
+export const getRosterSlots = cache(async (mode: Mode) => {
   const rows = await db
     .select({ area: areas, shift: shifts, capacity: seatTemplates.capacity })
     .from(seatTemplates)

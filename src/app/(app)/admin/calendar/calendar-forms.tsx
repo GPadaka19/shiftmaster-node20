@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { FormState } from "@/lib/forms";
+import type { Mode } from "@/lib/period/resolve";
 import { saveHoliday, savePeriod } from "./actions";
 
-export type PeriodDefaults = { id?: number; name: string; mode: "lecture" | "maintenance"; startDate: string; endDate: string };
+export type PeriodDefaults = { id?: number; name: string; mode: Mode; startDate: string; endDate: string };
 
 export function PeriodForm({ defaults }: { defaults?: PeriodDefaults }) {
   const [state, onSubmit, pending] = useFormAction(savePeriod);
@@ -25,7 +26,7 @@ export function PeriodForm({ defaults }: { defaults?: PeriodDefaults }) {
           <Input id="name" name="name" placeholder="Ganjil 2026/2027" defaultValue={defaults?.name} required className="h-11" />
         </Field>
         <Field label="Mode" htmlFor="mode" error={errors.mode} className="sm:col-span-2">
-          <NativeSelect id="mode" name="mode" value={mode} onChange={(event) => setMode(event.target.value as PeriodDefaults["mode"])}>
+          <NativeSelect id="mode" name="mode" value={mode} onChange={(event) => setMode(event.target.value as Mode)}>
             <option value="lecture">Masa Kuliah (lecture)</option>
             <option value="maintenance">Libur Semester (maintenance)</option>
           </NativeSelect>

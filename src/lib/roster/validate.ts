@@ -1,3 +1,4 @@
+import type { Mode } from "@/lib/period/resolve";
 import { formatShortDate, WEEKDAY_NAMES } from "@/lib/time";
 import type { GenArea, GenLock, GenSeat } from "./generate";
 
@@ -19,7 +20,7 @@ export type CheckedMember = {
 };
 
 export type ValidationInput = {
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   /** Monday first; weekday = index + 1. */
   dates: readonly string[];
   assignments: readonly CheckedAssignment[];

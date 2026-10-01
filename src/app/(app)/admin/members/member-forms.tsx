@@ -1,21 +1,24 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { Field, FormMessage, NativeSelect } from "@/components/form";
+import { useActionState, useState } from "react";
+import { Field, FormMessage, NativeSelect, PinInput } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAction } from "@/hooks/use-action";
 import { useFormAction } from "@/hooks/use-form-action";
-import type { FormState } from "@/lib/forms";
-import { NEWCOMER_WEEKS } from "@/lib/roster/newcomer";
 import { DEFAULT_PIN } from "@/lib/auth/constants";
+import { usesPin, type Role } from "@/lib/auth/roles";
+import type { FormState } from "@/lib/forms";
+import { POOL_LABEL, type Pool } from "@/lib/members/labels";
+import { NEWCOMER_WEEKS } from "@/lib/roster/newcomer";
 import { resetMemberPin, setMemberActive } from "./actions";
 
 export type MemberDefaults = {
   nickname: string;
   fullName: string;
   email: string;
-  role: "staff" | "admin" | "superadmin";
-  pool: "lab" | "studio" | "pkl" | "none";
+  role: Role;
+  pool: Pool | "none";
   dutyLabel: string;
   startedOn: string;
 };
@@ -60,17 +63,19 @@ export function MemberForm({
         </Field>
         <Field label="Pool roster" htmlFor="pool" error={errors.pool} hint="Menentukan di mana anggota dijadwalkan.">
           <NativeSelect id="pool" name="pool" value={pool} onChange={(event) => setPool(event.target.value as MemberDefaults["pool"])}>
-            <option value="lab">Lab (Gedung 2 & 7)</option>
-            <option value="studio">Studio</option>
-            <option value="pkl">PKL</option>
+            {Object.entries(POOL_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
             <option value="none">Tidak masuk roster</option>
           </NativeSelect>
         </Field>
         <Field
-          label={role === "staff" ? "Email (opsional)" : "Email Google"}
+          label={usesPin(role) ? "Email (opsional)" : "Email Google"}
           htmlFor="email"
           error={errors.email}
-          hint={role === "staff" ? undefined : "Harus sama dengan akun Google yang dipakai login."}
+          hint={usesPin(role) ? undefined : "Harus sama dengan akun Google yang dipakai login."}
         >
           <Input
             id="email"
@@ -78,7 +83,7 @@ export function MemberForm({
             type="email"
             autoComplete="off"
             defaultValue={defaults.email}
-            required={role !== "staff"}
+            required={!usesPin(role)}
             className="h-11"
             {...invalid("email")}
           />
@@ -112,18 +117,7 @@ export function PinForm({ action }: { action: (state: FormState, formData: FormD
   return (
     <form action={formAction} className="grid max-w-sm gap-4">
       <Field label="PIN baru" htmlFor="pin" error={state.fieldErrors?.pin} hint="Atau atur PIN tertentu (6–8 angka). Anggota tetap wajib menggantinya saat login.">
-        <Input
-          id="pin"
-          name="pin"
-          type="password"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          minLength={6}
-          maxLength={8}
-          autoComplete="new-password"
-          required
-          className="h-11"
-        />
+        <PinInput id="pin" name="pin" autoComplete="new-password" />
       </Field>
       <FormMessage error={state.error} success={state.success} />
       <Button type="submit" disabled={pending} className="h-11 justify-self-start px-4">
@@ -135,8 +129,7 @@ export function PinForm({ action }: { action: (state: FormState, formData: FormD
 
 /** For a staff member who forgot their PIN: back to the default, to be replaced at sign-in. */
 export function ResetPinButton({ memberId }: { memberId: number }) {
-  const [pending, startTransition] = useTransition();
-  const [state, setState] = useState<FormState>({});
+  const { pending, state, run } = useAction();
 
   return (
     <div className="grid gap-3">
@@ -145,10 +138,12 @@ export function ResetPinButton({ memberId }: { memberId: number }) {
         variant="outline"
         disabled={pending}
         className="h-11 justify-self-start px-4"
-        onClick={() => {
-          if (!window.confirm(`Kembalikan PIN anggota ini ke ${DEFAULT_PIN}? Mereka akan dikeluarkan dari semua perangkat.`)) return;
-          startTransition(async () => setState(await resetMemberPin(memberId)));
-        }}
+        onClick={() =>
+          run(
+            () => resetMemberPin(memberId),
+            `Kembalikan PIN anggota ini ke ${DEFAULT_PIN}? Mereka akan dikeluarkan dari semua perangkat.`,
+          )
+        }
       >
         {pending ? "Menyimpan…" : `Reset ke PIN awal (${DEFAULT_PIN})`}
       </Button>
@@ -158,8 +153,7 @@ export function ResetPinButton({ memberId }: { memberId: number }) {
 }
 
 export function ActiveToggle({ memberId, active }: { memberId: number; active: boolean }) {
-  const [pending, startTransition] = useTransition();
-  const [state, setState] = useState<FormState>({});
+  const { pending, state, run } = useAction();
 
   return (
     <div className="grid gap-3">
@@ -168,7 +162,7 @@ export function ActiveToggle({ memberId, active }: { memberId: number; active: b
         variant={active ? "destructive" : "outline"}
         disabled={pending}
         className="h-11 justify-self-start px-4"
-        onClick={() => startTransition(async () => setState(await setMemberActive(memberId, !active)))}
+        onClick={() => run(() => setMemberActive(memberId, !active))}
       >
         {pending ? "Menyimpan…" : active ? "Nonaktifkan anggota" : "Aktifkan lagi"}
       </Button>

@@ -1,22 +1,21 @@
 import { CloudOff, Search, SearchX } from "lucide-react";
-import Link from "next/link";
-import { cn } from "cn";
 import { DayTabs } from "@/components/day-tabs";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { SheetFreshness } from "@/components/schedule/freshness";
 import { StatusLegend } from "@/components/schedule/session";
 import { TimetableTable } from "@/components/schedule/timetable-table";
+import { TabLink } from "@/components/tab-link";
 import { Input } from "@/components/ui/input";
 import { requireMember } from "@/lib/auth/session";
 import { getModeToday } from "@/lib/period/queries";
-import { groupByArea } from "@/lib/rooms/group";
+import { areaKey, groupByArea } from "@/lib/rooms/group";
 import { getRoomDirectory } from "@/lib/rooms/queries";
 import { slotTimings } from "@/lib/schedule/slots";
 import { roomKey } from "@/lib/sheets/cells";
 import { getTimetable } from "@/lib/sheets/source";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
-import { isoWeekday, timeOfDay, WEEKDAY_NAMES } from "@/lib/time";
+import { clampWeekday, isoWeekday, timeOfDay, WEEKDAY_NAMES } from "@/lib/time";
 
 export const metadata = { title: "Jadwal Lab" };
 
@@ -56,9 +55,8 @@ export default async function TimetablePage({ searchParams }: PageProps<"/schedu
   const { today, mode } = await getModeToday();
   const todayWeekday = isoWeekday(today);
 
-  const requestedDay = Number(params.day);
   const filters: Filters = {
-    day: requestedDay >= 1 && requestedDay <= 5 ? requestedDay : todayWeekday <= 5 ? todayWeekday : 1,
+    day: clampWeekday(params.day, todayWeekday <= 5 ? todayWeekday : 1),
     building: params.building === "g2" || params.building === "g7" ? params.building : "",
     q: typeof params.q === "string" ? params.q.trim().slice(0, 60) : "",
   };
@@ -89,17 +87,13 @@ export default async function TimetablePage({ searchParams }: PageProps<"/schedu
         <div className="flex flex-wrap items-center gap-2">
           <nav aria-label="Pilih gedung" className="inline-flex gap-1">
             {BUILDINGS.map((building) => (
-              <Link
+              <TabLink
                 key={building.value}
                 href={hrefWith(filters, { building: building.value })}
-                aria-current={filters.building === building.value ? "page" : undefined}
-                className={cn(
-                  "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-                  filters.building === building.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
+                active={filters.building === building.value}
               >
                 {building.label}
-              </Link>
+              </TabLink>
             ))}
           </nav>
           <form action="/schedule" className="relative ml-auto w-full sm:w-72">
@@ -133,8 +127,8 @@ export default async function TimetablePage({ searchParams }: PageProps<"/schedu
       ) : (
         <div className="grid gap-8">
           {groups.map((group) => (
-            <section key={group.area?.code ?? "lainnya"} aria-labelledby={`area-${group.area?.code ?? "lainnya"}`} className="grid gap-3">
-              <h2 id={`area-${group.area?.code ?? "lainnya"}`} className="text-base font-semibold">
+            <section key={areaKey(group)} aria-labelledby={`area-${areaKey(group)}`} className="grid gap-3">
+              <h2 id={`area-${areaKey(group)}`} className="text-base font-semibold">
                 {group.area?.name ?? "Lainnya"}
                 <span className="ml-2 text-sm font-normal text-muted-foreground">{group.items.length} ruang</span>
               </h2>

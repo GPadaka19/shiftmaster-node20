@@ -7,14 +7,16 @@ import { hasRole, ROLE_LABEL } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
 import { MODE_LABEL } from "@/lib/period/resolve";
 import { getModeToday } from "@/lib/period/queries";
+import { swapAvailable } from "@/lib/swap/rules";
 import { swapCounts } from "@/lib/swap/service";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
+  // The mode does not depend on who is signed in, so its query starts first.
+  const modeToday = getModeToday();
   const member = await requireMember();
-  const mode = await getModeToday();
   const isAdmin = hasRole(member.role, "admin");
-  const counts = await swapCounts(member.id, isAdmin);
-  const showSwap = mode.mode === "lecture" && (member.pool === "lab" || member.pool === "studio");
+  const [mode, counts] = await Promise.all([modeToday, swapCounts(member.id, isAdmin)]);
+  const showSwap = swapAvailable(mode.mode, member.pool);
   const badges = { "/swaps": counts.incoming, "/admin/swaps": counts.awaitingAdmin };
 
   return (

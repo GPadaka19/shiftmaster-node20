@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormMessage, PinInput } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ export function PinForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState<PinSignInState, FormData>(signInWithPin, {});
   const [nickname, setNickname] = useState("");
   const locked = useLockCountdown(state.lockedUntil);
+  const error = state.error && (locked ? `Terlalu banyak percobaan. Coba lagi dalam ${locked}.` : state.error);
 
   return (
     <form action={action} className="grid gap-4">
@@ -32,27 +33,10 @@ export function PinForm({ next }: { next: string }) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="pin">PIN</Label>
-        <Input
-          id="pin"
-          name="pin"
-          type="password"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          minLength={6}
-          maxLength={8}
-          autoComplete="current-password"
-          required
-          className="h-11 tracking-widest"
-        />
+        <PinInput id="pin" name="pin" autoComplete="current-password" className="tracking-widest" />
       </div>
 
-      {state.error && (
-        <Alert variant="destructive" aria-live="polite">
-          <AlertDescription>
-            {locked ? `Terlalu banyak percobaan. Coba lagi dalam ${locked}.` : state.error}
-          </AlertDescription>
-        </Alert>
-      )}
+      <FormMessage error={error} />
 
       <Button type="submit" disabled={pending || Boolean(locked)} className="h-11 text-base">
         {pending ? "Memeriksa…" : "Masuk"}

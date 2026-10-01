@@ -1,10 +1,9 @@
-import { CalendarOff, ChevronLeft, ChevronRight } from "lucide-react";
-import Link from "next/link";
-import { cn } from "cn";
+import { CalendarOff } from "lucide-react";
 import { DayTabs } from "@/components/day-tabs";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
+import { TabLink } from "@/components/tab-link";
+import { WeekNav, WeekRange } from "@/components/week-nav";
 import { requireMember } from "@/lib/auth/session";
 import { getHolidays, getModeToday } from "@/lib/period/queries";
 import { roomKeysForArea } from "@/lib/rooms/group";
@@ -14,7 +13,7 @@ import { slotTimings } from "@/lib/schedule/slots";
 import { roomKey } from "@/lib/sheets/cells";
 import { getTimetable } from "@/lib/sheets/source";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
-import { addDaysIso, formatLongDate, formatWeekRange, isMondayIso, isoWeekday, timeOfDay, weekStartIso } from "@/lib/time";
+import { clampWeekday, formatLongDate, isMondayIso, isoWeekday, timeOfDay, weekDates, weekStartIso } from "@/lib/time";
 import { MyWeek, RosterDayView, RosterTable } from "./roster-views";
 
 export const metadata = { title: "Roster" };
@@ -36,16 +35,15 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
   const { today } = await getModeToday();
   const thisWeek = weekStartIso(today);
   const todayWeekday = isoWeekday(today);
+  const defaultDay = todayWeekday <= 5 ? todayWeekday : 1;
 
   const weekStart = isMondayIso(params.week) ? params.week : thisWeek;
-  const requestedDay = Number(params.day);
   const query: Query = {
     week: weekStart,
     view: params.view === "table" ? "table" : "day",
-    day:
-      requestedDay >= 1 && requestedDay <= 5 ? requestedDay : weekStart === thisWeek && todayWeekday <= 5 ? todayWeekday : 1,
+    day: clampWeekday(params.day, weekStart === thisWeek ? defaultDay : 1),
   };
-  const dates = [0, 1, 2, 3, 4].map((offset) => addDaysIso(weekStart, offset));
+  const dates = weekDates(weekStart);
   const date = dates[query.day - 1];
 
   const [week, holidays] = await Promise.all([getPublishedRosterWeek(weekStart), getHolidays(dates[0], dates[4])]);
@@ -53,30 +51,14 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
   const header = (
     <PageHeader
       title="Roster"
-      description={
-        <span className="tabular-nums">
-          {formatWeekRange(weekStart)}
-          {weekStart === thisWeek && <span className="ml-2 text-brand-text">Minggu ini</span>}
-        </span>
-      }
+      description={<WeekRange weekStart={weekStart} thisWeek={thisWeek} />}
       actions={
-        <div className="flex items-center gap-1">
-          {weekStart !== thisWeek && (
-            <Button asChild variant="ghost" className="h-10 px-3">
-              <Link href={hrefWith(query, { week: thisWeek, day: todayWeekday <= 5 ? todayWeekday : 1 })}>Minggu ini</Link>
-            </Button>
-          )}
-          <Button asChild variant="outline" size="icon" className="size-10">
-            <Link href={hrefWith(query, { week: addDaysIso(weekStart, -7) })} aria-label="Minggu sebelumnya">
-              <ChevronLeft aria-hidden="true" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="icon" className="size-10">
-            <Link href={hrefWith(query, { week: addDaysIso(weekStart, 7) })} aria-label="Minggu berikutnya">
-              <ChevronRight aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
+        <WeekNav
+          weekStart={weekStart}
+          thisWeek={thisWeek}
+          hrefFor={(week) => hrefWith(query, { week })}
+          thisWeekHref={hrefWith(query, { week: thisWeek, day: defaultDay })}
+        />
       }
     />
   );
@@ -135,17 +117,9 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
           )}
           <nav aria-label="Tampilan" className="inline-flex gap-1">
             {(["day", "table"] as const).map((view) => (
-              <Link
-                key={view}
-                href={hrefWith(query, { view })}
-                aria-current={query.view === view ? "page" : undefined}
-                className={cn(
-                  "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-                  query.view === view ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
-                )}
-              >
+              <TabLink key={view} href={hrefWith(query, { view })} active={query.view === view}>
                 {view === "day" ? "Per hari" : "Tabel"}
-              </Link>
+              </TabLink>
             ))}
           </nav>
         </div>

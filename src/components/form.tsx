@@ -1,7 +1,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PIN_MAX_LENGTH, PIN_MIN_LENGTH } from "@/lib/auth/constants";
 
 export function Field({
   label,
@@ -41,6 +43,25 @@ export function NativeSelect({ className, ...props }: ComponentProps<"select">) 
         "h-11 w-full min-w-0 rounded-lg border border-input bg-card px-2.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 aria-invalid:border-destructive md:text-sm",
         className,
       )}
+      {...props}
+    />
+  );
+}
+
+/** A PIN field that brings up the number pad on phones. */
+export function PinInput({
+  className,
+  ...props
+}: Pick<ComponentProps<"input">, "id" | "name" | "autoComplete" | "autoFocus" | "className">) {
+  return (
+    <Input
+      type="password"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      minLength={PIN_MIN_LENGTH}
+      maxLength={PIN_MAX_LENGTH}
+      required
+      className={cn("h-11", className)}
       {...props}
     />
   );

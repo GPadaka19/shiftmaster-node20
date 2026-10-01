@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { usesPin } from "@/lib/auth/roles";
 
 const optionalText = (max: number) =>
   z
@@ -27,7 +28,7 @@ export const memberInputSchema = z
       .optional()
       .transform((value) => value || null),
   })
-  .refine((member) => member.role === "staff" || member.email !== null, {
+  .refine((member) => usesPin(member.role) || member.email !== null, {
     message: "Admin dan superadmin wajib punya email Google.",
     path: ["email"],
   });

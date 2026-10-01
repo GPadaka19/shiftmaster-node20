@@ -6,7 +6,7 @@ import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, PIN_PATTERN } from "@/lib/auth/pin";
-import { createSession, getCurrentMember, revokeMemberSessions } from "@/lib/auth/session";
+import { createSession, requirePendingPinChange, revokeMemberSessions } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { members } from "@/lib/db/schema";
 
@@ -22,18 +22,14 @@ const schema = z
 
 /** Replaces a PIN an admin gave out. The member just signed in with it, so the old PIN is not asked again. */
 export async function chooseOwnPin(_previous: ChooseOwnPinState, formData: FormData): Promise<ChooseOwnPinState> {
-  const member = await getCurrentMember();
-  if (!member) redirect("/login");
-  if (!member.pinMustChange) redirect("/");
+  const member = await requirePendingPinChange();
 
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
+  const pinHash = await hashPin(parsed.data.newPin);
   await db.transaction(async (tx) => {
-    await tx
-      .update(members)
-      .set({ pinHash: await hashPin(parsed.data.newPin), pinMustChange: false })
-      .where(eq(members.id, member.id));
+    await tx.update(members).set({ pinHash, pinMustChange: false }).where(eq(members.id, member.id));
     await writeAudit({ actorId: member.id, action: "member.pin.change", subject: `member:${member.id}` }, tx);
   });
 

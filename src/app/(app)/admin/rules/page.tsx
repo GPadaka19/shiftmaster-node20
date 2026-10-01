@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { areas, memberG2Locks, memberPatterns, members, shifts } from "@/lib/db/schema";
-import { POOL_LABEL } from "@/lib/members/labels";
+import { POOL_LABEL, type Pool } from "@/lib/members/labels";
 import { getDefaultMaxG2, seatsFor } from "@/lib/roster/service";
 import { WEEKDAY_NAMES } from "@/lib/time";
 import { DefaultMaxG2Form, MemberRuleForm, type DayRule } from "./rule-forms";
@@ -17,7 +17,7 @@ export const metadata = { title: "Aturan" };
 
 const POOLS = ["lab", "studio", "pkl"] as const;
 
-const POOL_HINT: Record<(typeof POOLS)[number], string> = {
+const POOL_HINT: Record<Pool, string> = {
   lab: "Generator merotasi lantai mereka di dalam shift yang dipilih. Kunci G2 memaksa anggota di G2 pada hari itu.",
   studio: "Selalu bertugas di Studio G2 sesuai shift yang dipilih.",
   pkl: "Bertugas satu gedung penuh sesuai shift dan gedung yang dipilih.",

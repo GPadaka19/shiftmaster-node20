@@ -20,7 +20,7 @@ export async function savePeriod(_previous: FormState, formData: FormData): Prom
   const actor = await requireRole("admin");
   const values = submittedValues(formData);
   const parsed = periodInputSchema.safeParse(values);
-  if (!parsed.success) return { fieldErrors: fieldErrorsOf(parsed.error), values };
+  if (!parsed.success) return { fieldErrors: fieldErrorsOf(parsed.error) };
 
   const id = values.id ? Number(values.id) : undefined;
   const existing = await db.select().from(periods);
@@ -28,7 +28,6 @@ export async function savePeriod(_previous: FormState, formData: FormData): Prom
   if (overlap) {
     return {
       error: `Bertabrakan dengan periode "${overlap.name}" (${formatShortDate(overlap.startDate)} – ${formatShortDate(overlap.endDate)}).`,
-      values,
     };
   }
 

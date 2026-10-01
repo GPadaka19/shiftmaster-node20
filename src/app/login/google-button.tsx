@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FormMessage } from "@/components/form";
 import { signInWithGoogle } from "./actions";
 
 type GoogleCredentialResponse = { credential: string };
@@ -64,11 +64,7 @@ export function GoogleButton({ clientId, next }: { clientId: string; next: strin
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={() => setScriptReady(true)} />
       <div ref={container} className="flex min-h-11 w-full justify-center" aria-busy={pending} />
       {pending && <p className="text-center text-sm text-muted-foreground">Memeriksa akun…</p>}
-      {error && (
-        <Alert variant="destructive" aria-live="polite">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <FormMessage error={error} />
     </div>
   );
 }

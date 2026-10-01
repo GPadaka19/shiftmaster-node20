@@ -7,7 +7,7 @@ import { PIN_LOCK_MINUTES, PIN_MAX_ATTEMPTS } from "@/lib/auth/constants";
 import { verifyGoogleCredential } from "@/lib/auth/google";
 import { isPinLocked, normalizeNickname, PIN_PATTERN, registerPinFailure, verifyPin } from "@/lib/auth/pin";
 import { safeNextPath } from "@/lib/auth/redirect";
-import { hasRole } from "@/lib/auth/roles";
+import { hasRole, usesPin } from "@/lib/auth/roles";
 import { createSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { members } from "@/lib/db/schema";
@@ -56,7 +56,7 @@ export async function signInWithPin(_previous: PinSignInState, formData: FormDat
     .limit(1);
 
   if (!member) return { error: "Nickname atau PIN salah.", nickname };
-  if (member.role !== "staff") return { error: "Akun admin masuk lewat tombol Google.", nickname };
+  if (!usesPin(member.role)) return { error: "Akun admin masuk lewat tombol Google.", nickname };
   if (!member.pinHash) return { error: "PIN kamu belum diatur. Minta admin untuk mengaturnya.", nickname };
 
   const now = new Date();

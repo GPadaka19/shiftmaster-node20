@@ -4,6 +4,7 @@ import { Field, FormMessage, NativeSelect } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFormAction } from "@/hooks/use-form-action";
+import type { Pool } from "@/lib/members/labels";
 import { WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/time";
 import { saveDefaultMaxG2, saveMemberRules } from "./actions";
 
@@ -40,7 +41,7 @@ export function MemberRuleForm({
 }: {
   memberId: number;
   nickname: string;
-  pool: "lab" | "studio" | "pkl";
+  pool: Pool;
   days: Record<number, DayRule>;
   maxG2: number | null;
   defaultMaxG2: number;

@@ -1,29 +1,17 @@
-import { asc, eq } from "drizzle-orm";
-import { ChevronLeft, ChevronRight, CircleAlert, Info, TriangleAlert } from "lucide-react";
-import Link from "next/link";
+import { CircleAlert, Info, TriangleAlert } from "lucide-react";
 import { cn } from "cn";
 import { ModeBadge } from "@/components/mode-badge";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { WeekNav, WeekRange, WeekStatusBadge } from "@/components/week-nav";
 import { requireRole } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { memberG2Locks, members } from "@/lib/db/schema";
-import { getHolidays, getModeToday } from "@/lib/period/queries";
+import { getHolidays, getModeOn, getModeToday } from "@/lib/period/queries";
+import type { Mode } from "@/lib/period/resolve";
 import { distribution } from "@/lib/roster/distribution";
-import {
-  getDefaultMaxG2,
-  getEditorAssignments,
-  getWeekRecord,
-  modeOn,
-  previousRosterWeek,
-  seatsFor,
-  weekDates,
-} from "@/lib/roster/service";
-import { g2RuleFor } from "@/lib/roster/newcomer";
+import { getEditorAssignments, getWeekRecord, previousRosterWeek, seatsFor } from "@/lib/roster/service";
 import { validateRoster, type CheckedMember, type Violation } from "@/lib/roster/validate";
-import { addDaysIso, formatDateTime, formatWeekRange, isMondayIso, weekStartIso } from "@/lib/time";
+import { loadWeekRules } from "@/lib/roster/week-rules";
+import { formatDateTime, formatWeekRange, isMondayIso, weekDates, weekStartIso } from "@/lib/time";
 import { RosterEditor, type EditorRow, type EditorSeat } from "./roster-editor";
 import { WeekActions } from "./week-actions";
 
@@ -37,11 +25,14 @@ export default async function RosterEditorPage({ searchParams }: PageProps<"/adm
   const weekStart = isMondayIso(params.week) ? params.week : thisWeek;
   const dates = weekDates(weekStart);
 
-  const week = await getWeekRecord(weekStart);
-  const mode = week?.mode ?? (await modeOn(weekStart));
-  const [seats, holidays, previous] = await Promise.all([seatsFor(mode), getHolidays(dates[0], dates[4]), previousRosterWeek(weekStart)]);
+  const [week, holidays, previous] = await Promise.all([
+    getWeekRecord(weekStart),
+    getHolidays(dates[0], dates[4]),
+    previousRosterWeek(weekStart),
+  ]);
+  const mode = week?.mode ?? (await getModeOn(weekStart)).mode;
+  const seats = await seatsFor(mode);
 
-  const href = (week: string) => `/admin/roster?week=${week}`;
   const status = week ? week.status : "none";
 
   return (
@@ -49,31 +40,11 @@ export default async function RosterEditorPage({ searchParams }: PageProps<"/adm
       <PageHeader
         title="Editor Roster"
         description={
-          <span className="inline-flex flex-wrap items-center gap-2 tabular-nums">
-            {formatWeekRange(weekStart)}
-            {weekStart === thisWeek && <span className="text-brand-text">Minggu ini</span>}
+          <WeekRange weekStart={weekStart} thisWeek={thisWeek}>
             <ModeBadge mode={mode} />
-          </span>
+          </WeekRange>
         }
-        actions={
-          <div className="flex items-center gap-1">
-            {weekStart !== thisWeek && (
-              <Button asChild variant="ghost" className="h-10 px-3">
-                <Link href={href(thisWeek)}>Minggu ini</Link>
-              </Button>
-            )}
-            <Button asChild variant="outline" size="icon" className="size-10">
-              <Link href={href(addDaysIso(weekStart, -7))} aria-label="Minggu sebelumnya">
-                <ChevronLeft aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="icon" className="size-10">
-              <Link href={href(addDaysIso(weekStart, 7))} aria-label="Minggu berikutnya">
-                <ChevronRight aria-hidden="true" />
-              </Link>
-            </Button>
-          </div>
-        }
+        actions={<WeekNav weekStart={weekStart} thisWeek={thisWeek} hrefFor={(week) => `/admin/roster?week=${week}`} />}
       />
 
       <div className="grid gap-6">
@@ -81,8 +52,7 @@ export default async function RosterEditorPage({ searchParams }: PageProps<"/adm
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Status
-              {status === "draft" && <Badge variant="outline">Draf</Badge>}
-              {status === "published" && <Badge>Terbit</Badge>}
+              <WeekStatusBadge status={week?.status ?? null} />
             </CardTitle>
             <CardDescription>
               {status === "none" && "Belum ada roster untuk minggu ini."}
@@ -126,21 +96,12 @@ async function EditorSection({
 }: {
   weekId: number;
   weekStart: string;
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   dates: string[];
   seats: Awaited<ReturnType<typeof seatsFor>>;
   holidays: Record<string, string>;
 }) {
-  const [rows, team, locks, defaultMaxG2] = await Promise.all([
-    getEditorAssignments(weekId),
-    db
-      .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn })
-      .from(members)
-      .where(eq(members.active, true))
-      .orderBy(asc(members.nicknameNormalized)),
-    db.select().from(memberG2Locks),
-    getDefaultMaxG2(),
-  ]);
+  const [rows, { members: team, locks }] = await Promise.all([getEditorAssignments(weekId), loadWeekRules(weekStart, "active")]);
 
   const editorRows: EditorRow[] = seats.map((seat) => ({
     areaId: seat.area.id,
@@ -159,9 +120,8 @@ async function EditorSection({
     (dutyLabels[row.date] ??= {})[row.memberId] = `${row.area.name} ${row.shiftLabel}`;
   }
 
-  const memberInfo = new Map<number, CheckedMember>(
-    team.map((m) => [m.id, { nickname: m.nickname, active: true, ...g2RuleFor(m, weekStart, defaultMaxG2) }]),
-  );
+  // Inactive members still on the roster are checked too.
+  const memberInfo = new Map<number, CheckedMember>(team);
   for (const row of rows) {
     if (!memberInfo.has(row.memberId)) memberInfo.set(row.memberId, { nickname: row.nickname, active: row.active, maxG2: null });
   }
@@ -190,7 +150,7 @@ async function EditorSection({
         holidays={holidays}
         rows={editorRows}
         seats={cells}
-        members={team.filter((m) => m.pool !== null).map(({ id, nickname, pool }) => ({ id, nickname, pool }))}
+        members={[...team.values()].filter((m) => m.pool !== null).map(({ id, nickname, pool }) => ({ id, nickname, pool }))}
         dutyLabels={dutyLabels}
       />
       {spread.length > 0 && (

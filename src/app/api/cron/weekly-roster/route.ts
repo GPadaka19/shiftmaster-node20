@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
-import { copyWeek, generateWeek, getWeekRecord, modeOn, RosterError } from "@/lib/roster/service";
+import { getModeOn } from "@/lib/period/queries";
+import { copyWeek, generateWeek, getWeekRecord, RosterError } from "@/lib/roster/service";
 import { addDaysIso, todayIso, weekStartIso } from "@/lib/time";
 
 // Called by cron on the host every Friday 17:30 WIB:
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
   if (existing) return Response.json({ status: "exists", weekStart: nextWeek, rosterStatus: existing.status });
 
   try {
-    if ((await modeOn(nextWeek)) === "lecture") {
+    if ((await getModeOn(nextWeek)).mode === "lecture") {
       const { warnings } = await generateWeek(nextWeek, { actorId: null, publish: true });
       return Response.json({ status: "generated", weekStart: nextWeek, warnings });
     }

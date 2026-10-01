@@ -1,12 +1,12 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { Plus, Users } from "lucide-react";
 import Link from "next/link";
-import { cn } from "cn";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { TabLink } from "@/components/tab-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ROLE_LABEL } from "@/lib/auth/roles";
+import { ROLE_LABEL, usesPin } from "@/lib/auth/roles";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { members } from "@/lib/db/schema";
@@ -55,17 +55,9 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
           { label: "Aktif", href: "/admin/members", current: !showInactive },
           { label: "Nonaktif", href: "/admin/members?status=inactive", current: showInactive },
         ].map((tab) => (
-          <Link
-            key={tab.label}
-            href={tab.href}
-            aria-current={tab.current ? "page" : undefined}
-            className={cn(
-              "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-              tab.current ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
+          <TabLink key={tab.label} href={tab.href} active={tab.current}>
             {tab.label}
-          </Link>
+          </TabLink>
         ))}
       </nav>
 
@@ -86,7 +78,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="outline">{ROLE_LABEL[member.role]}</Badge>
                   {member.pool && <Badge variant="secondary">{POOL_SHORT_LABEL[member.pool]}</Badge>}
-                  {member.role === "staff" &&
+                  {usesPin(member.role) &&
                     (member.locked ? (
                       <Badge variant="destructive">PIN terkunci</Badge>
                     ) : !member.hasPin ? (

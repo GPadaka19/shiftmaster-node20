@@ -1,23 +1,15 @@
 import "server-only";
-import { and, asc, eq, inArray, isNotNull, lt, max } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, max } from "drizzle-orm";
 import { writeAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
-import {
-  areas,
-  assignments,
-  memberG2Locks,
-  memberPatterns,
-  members,
-  periods,
-  rosterWeeks,
-  settings,
-  shifts,
-} from "@/lib/db/schema";
-import { resolveMode, type Mode } from "@/lib/period/resolve";
-import { addDaysIso, formatWeekRange } from "@/lib/time";
-import { generateLectureRoster, type GeneratorInput, type GenSeat } from "./generate";
-import { g2RuleFor } from "./newcomer";
+import type { Executor } from "@/lib/db/client";
+import { areas, assignments, memberPatterns, members, rosterWeeks, shifts } from "@/lib/db/schema";
+import { getModeOn } from "@/lib/period/queries";
+import type { Mode } from "@/lib/period/resolve";
+import { addDaysIso, formatWeekRange, weekDates } from "@/lib/time";
+import { generateLectureRoster, type GeneratedAssignment, type GeneratorInput, type GenSeat } from "./generate";
 import { getRosterSlots } from "./queries";
+import { loadWeekRules } from "./week-rules";
 
 // Every roster change goes through here, so the admin pages and the weekly
 // cron share the same rules. Callers check permissions; this module does not.
@@ -25,26 +17,13 @@ import { getRosterSlots } from "./queries";
 /** A rule was broken; the message is meant for the admin. */
 export class RosterError extends Error {}
 
-export const DEFAULT_MAX_G2 = 2;
-
-export function weekDates(weekStart: string): string[] {
-  return [0, 1, 2, 3, 4].map((offset) => addDaysIso(weekStart, offset));
-}
+export { DEFAULT_MAX_G2 } from "./constants";
+export { getDefaultMaxG2 } from "./week-rules";
+export { weekDates } from "@/lib/time";
 
 export async function getWeekRecord(weekStart: string) {
   const [week] = await db.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, weekStart));
   return week ?? null;
-}
-
-/** Mode of the period covering `date` (the week's Monday). */
-export async function modeOn(date: string): Promise<Mode> {
-  const rows = await db.select({ name: periods.name, mode: periods.mode, startDate: periods.startDate, endDate: periods.endDate }).from(periods);
-  return resolveMode(rows, date).mode;
-}
-
-export async function getDefaultMaxG2(): Promise<number> {
-  const [row] = await db.select({ value: settings.value }).from(settings).where(eq(settings.key, "max_g2_per_week_default"));
-  return typeof row?.value === "number" ? row.value : DEFAULT_MAX_G2;
 }
 
 export async function seatsFor(mode: Mode): Promise<GenSeat[]> {
@@ -58,28 +37,45 @@ export async function seatsFor(mode: Mode): Promise<GenSeat[]> {
 
 /** Members, weekly patterns, G2 locks and lecture seats, as the generator wants them. */
 export async function loadGeneratorInput(weekStart: string): Promise<GeneratorInput> {
-  const defaultMaxG2 = await getDefaultMaxG2();
-  const team = await db
-    .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn })
-    .from(members)
-    .where(and(eq(members.active, true), isNotNull(members.pool)));
-  const ids = team.map((m) => m.id);
-  const rules = new Map(team.map((m) => [m.id, g2RuleFor(m, weekStart, defaultMaxG2)]));
-  // A newcomer's G2 lock would contradict their G7-only weeks.
-  const newcomers = new Set(team.filter((m) => rules.get(m.id)!.g7OnlyUntil).map((m) => m.id));
+  const [{ defaultMaxG2, members: team, locks }, seats] = await Promise.all([
+    loadWeekRules(weekStart, "active-pooled"),
+    seatsFor("lecture"),
+  ]);
+  const ids = [...team.keys()];
 
   return {
     dates: weekDates(weekStart),
-    members: team.map((m) => ({ id: m.id, nickname: m.nickname, pool: m.pool!, maxG2: rules.get(m.id)!.maxG2 ?? defaultMaxG2 })),
+    members: [...team.values()].map((m) => ({ id: m.id, nickname: m.nickname, pool: m.pool!, maxG2: m.maxG2 ?? defaultMaxG2 })),
     patterns: ids.length ? await db.select().from(memberPatterns).where(inArray(memberPatterns.memberId, ids)) : [],
-    locks: ids.length
-      ? (await db.select().from(memberG2Locks).where(inArray(memberG2Locks.memberId, ids))).filter((lock) => !newcomers.has(lock.memberId))
-      : [],
-    seats: await seatsFor("lecture"),
+    locks,
+    seats,
   };
 }
 
-type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0];
+/** The week's row, locked for the transaction when asked. Throws when the week has no roster. */
+async function lockWeek(tx: Executor, weekStart: string, { forUpdate }: { forUpdate: boolean }) {
+  const query = tx.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, weekStart));
+  const [week] = forUpdate ? await query.for("update") : await query;
+  if (!week) throw new RosterError("Roster minggu ini belum ada.");
+  return week;
+}
+
+/** A hand edit makes a generated week manual. */
+async function markManual(tx: Executor, week: typeof rosterWeeks.$inferSelect) {
+  if (week.source === "generated") await tx.update(rosterWeeks).set({ source: "manual" }).where(eq(rosterWeeks.id, week.id));
+}
+
+/** Replaces every seat of the week, publishing it after when asked. */
+async function replaceSeats(
+  tx: Executor,
+  weekId: number,
+  rows: readonly GeneratedAssignment[],
+  { publish, actorId }: { publish: boolean; actorId: number | null },
+) {
+  await tx.delete(assignments).where(eq(assignments.rosterWeekId, weekId));
+  if (rows.length) await tx.insert(assignments).values(rows.map((row) => ({ ...row, rosterWeekId: weekId })));
+  if (publish) await setPublished(tx, weekId, actorId);
+}
 
 /** The week's row, created as a draft when missing. Refuses to touch a published week unless allowed. */
 async function weekForWriting(
@@ -109,7 +105,7 @@ async function setPublished(tx: Executor, weekId: number, actorId: number | null
 
 /** Generates a lecture week from the rules, replacing a draft's seats. */
 export async function generateWeek(weekStart: string, { actorId, publish }: { actorId: number | null; publish: boolean }) {
-  const mode = await modeOn(weekStart);
+  const { mode } = await getModeOn(weekStart);
   if (mode !== "lecture") {
     throw new RosterError("Generator hanya untuk masa kuliah. Untuk libur semester, salin dari minggu lalu atau isi manual.");
   }
@@ -121,9 +117,7 @@ export async function generateWeek(weekStart: string, { actorId, publish }: { ac
 
   const weekId = await db.transaction(async (tx) => {
     const id = await weekForWriting(tx, weekStart, mode, { source: "generated", actorId, allowPublished: false });
-    await tx.delete(assignments).where(eq(assignments.rosterWeekId, id));
-    if (result.assignments.length) await tx.insert(assignments).values(result.assignments.map((a) => ({ ...a, rosterWeekId: id })));
-    if (publish) await setPublished(tx, id, actorId);
+    await replaceSeats(tx, id, result.assignments, { publish, actorId });
     await writeAudit(
       { actorId, action: "roster.generate", subject: `roster_week:${weekStart}`, detail: { publish, warnings: result.warnings } },
       tx,
@@ -137,7 +131,7 @@ export async function generateWeek(weekStart: string, { actorId, publish }: { ac
 export async function copyWeek(fromWeekStart: string, weekStart: string, { actorId, publish }: { actorId: number | null; publish: boolean }) {
   const source = await getWeekRecord(fromWeekStart);
   if (!source) throw new RosterError(`Belum ada roster ${formatWeekRange(fromWeekStart)} untuk disalin.`);
-  const mode = await modeOn(weekStart);
+  const { mode } = await getModeOn(weekStart);
   if (source.mode !== mode) {
     throw new RosterError("Minggu sumber punya mode berbeda (kuliah/libur), jadi kursinya tidak sama.");
   }
@@ -150,19 +144,16 @@ export async function copyWeek(fromWeekStart: string, weekStart: string, { actor
 
   return db.transaction(async (tx) => {
     const id = await weekForWriting(tx, weekStart, mode, { source: "manual", actorId, allowPublished: false });
-    await tx.delete(assignments).where(eq(assignments.rosterWeekId, id));
     const copies = rows
       .filter((row) => activeIds.has(row.memberId))
       .map((row) => ({
-        rosterWeekId: id,
         date: addDaysIso(row.date, offset),
         areaId: row.areaId,
         shiftId: row.shiftId,
         memberId: row.memberId,
         position: row.position,
       }));
-    if (copies.length) await tx.insert(assignments).values(copies);
-    if (publish) await setPublished(tx, id, actorId);
+    await replaceSeats(tx, id, copies, { publish, actorId });
     await writeAudit(
       { actorId, action: "roster.copy", subject: `roster_week:${weekStart}`, detail: { from: fromWeekStart, publish, seats: copies.length } },
       tx,
@@ -172,7 +163,7 @@ export async function copyWeek(fromWeekStart: string, weekStart: string, { actor
 }
 
 export async function createEmptyWeek(weekStart: string, actorId: number) {
-  const mode = await modeOn(weekStart);
+  const { mode } = await getModeOn(weekStart);
   return db.transaction(async (tx) => {
     const id = await weekForWriting(tx, weekStart, mode, { source: "manual", actorId, allowPublished: false });
     await writeAudit({ actorId, action: "roster.create", subject: `roster_week:${weekStart}` }, tx);
@@ -182,8 +173,7 @@ export async function createEmptyWeek(weekStart: string, actorId: number) {
 
 export async function setWeekStatus(weekStart: string, status: "draft" | "published", actorId: number) {
   await db.transaction(async (tx) => {
-    const [week] = await tx.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, weekStart)).for("update");
-    if (!week) throw new RosterError("Roster minggu ini belum ada.");
+    const week = await lockWeek(tx, weekStart, { forUpdate: true });
     if (status === "published") await setPublished(tx, week.id, actorId);
     else await tx.update(rosterWeeks).set({ status: "draft", publishedAt: null, publishedBy: null }).where(eq(rosterWeeks.id, week.id));
     await writeAudit(
@@ -216,8 +206,7 @@ export async function addToSeat(input: {
   actorId: number;
 }) {
   await db.transaction(async (tx) => {
-    const [week] = await tx.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, input.weekStart)).for("update");
-    if (!week) throw new RosterError("Roster minggu ini belum ada.");
+    const week = await lockWeek(tx, input.weekStart, { forUpdate: true });
     if (!weekDates(input.weekStart).includes(input.date)) throw new RosterError("Tanggal di luar minggu ini.");
 
     const seat = (await seatsFor(week.mode)).find((s) => s.area.id === input.areaId && s.shift.id === input.shiftId);
@@ -251,7 +240,7 @@ export async function addToSeat(input: {
       memberId: input.memberId,
       position,
     });
-    if (week.source === "generated") await tx.update(rosterWeeks).set({ source: "manual" }).where(eq(rosterWeeks.id, week.id));
+    await markManual(tx, week);
     await writeAudit(
       {
         actorId: input.actorId,
@@ -266,14 +255,13 @@ export async function addToSeat(input: {
 
 export async function removeFromSeat(input: { weekStart: string; assignmentId: number; actorId: number }) {
   await db.transaction(async (tx) => {
-    const [week] = await tx.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, input.weekStart));
-    if (!week) throw new RosterError("Roster minggu ini belum ada.");
+    const week = await lockWeek(tx, input.weekStart, { forUpdate: false });
     const [removed] = await tx
       .delete(assignments)
       .where(and(eq(assignments.id, input.assignmentId), eq(assignments.rosterWeekId, week.id)))
       .returning();
     if (!removed) return;
-    if (week.source === "generated") await tx.update(rosterWeeks).set({ source: "manual" }).where(eq(rosterWeeks.id, week.id));
+    await markManual(tx, week);
     await writeAudit(
       {
         actorId: input.actorId,
@@ -292,8 +280,7 @@ export async function copyDayToWeek(input: { weekStart: string; fromDate: string
   if (!dates.includes(input.fromDate)) throw new RosterError("Tanggal di luar minggu ini.");
 
   await db.transaction(async (tx) => {
-    const [week] = await tx.select().from(rosterWeeks).where(eq(rosterWeeks.weekStart, input.weekStart)).for("update");
-    if (!week) throw new RosterError("Roster minggu ini belum ada.");
+    const week = await lockWeek(tx, input.weekStart, { forUpdate: true });
     const source = await tx
       .select()
       .from(assignments)

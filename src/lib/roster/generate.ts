@@ -1,3 +1,4 @@
+import type { Pool } from "@/lib/members/labels";
 import { WEEKDAY_NAMES } from "@/lib/time";
 import { seededRandom, shuffled } from "./random";
 
@@ -18,7 +19,7 @@ import { seededRandom, shuffled } from "./random";
 export type GenArea = { id: number; name: string; building: "G2" | "G7"; kind: "floor" | "studio" | "building" };
 export type GenShift = { id: number; label: string };
 export type GenSeat = { area: GenArea; shift: GenShift; capacity: number };
-export type GenMember = { id: number; nickname: string; pool: "lab" | "studio" | "pkl"; maxG2: number };
+export type GenMember = { id: number; nickname: string; pool: Pool; maxG2: number };
 /** weekday: 1 = Monday … 5 = Friday. areaId null means "rotate me". */
 export type GenPattern = { memberId: number; weekday: number; shiftId: number; areaId: number | null };
 export type GenLock = { memberId: number; weekday: number };

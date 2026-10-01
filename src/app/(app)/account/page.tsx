@@ -6,7 +6,7 @@ import { adminItemsFor } from "@/components/shell/admin-items";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ROLE_LABEL } from "@/lib/auth/roles";
+import { ROLE_LABEL, usesPin } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
 import { POOL_LABEL } from "@/lib/members/labels";
 import { signOut } from "./actions";
@@ -71,7 +71,7 @@ export default async function AccountPage() {
           </CardContent>
         </Card>
 
-        {member.role === "staff" && (
+        {usesPin(member.role) && (
           <Card>
             <CardHeader>
               <CardTitle>Ganti PIN</CardTitle>

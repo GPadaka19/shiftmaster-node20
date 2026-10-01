@@ -7,7 +7,8 @@ import { AnswerButtons, SwapRequestForm, WithdrawButton } from "@/components/swa
 import { SwapCard } from "@/components/swap/swap-card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { requireMember } from "@/lib/auth/session";
-import { myTradableSeats, swapCandidates, swapsForMember } from "@/lib/swap/service";
+import { poolCanSwap, seatLabel } from "@/lib/swap/rules";
+import { expireOverdueSwaps, myTradableSeats, swapCandidates, swapsForMember } from "@/lib/swap/service";
 import { formatLongDate } from "@/lib/time";
 
 export const metadata = { title: "Tukar Shift" };
@@ -16,7 +17,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
   const member = await requireMember();
   const params = await searchParams;
 
-  if (member.pool !== "lab" && member.pool !== "studio") {
+  if (!poolCanSwap(member.pool)) {
     return (
       <>
         <PageHeader title="Tukar Shift" />
@@ -29,9 +30,14 @@ export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
     );
   }
 
-  const [swaps, seats] = await Promise.all([swapsForMember(member.id), myTradableSeats(member.id)]);
   const selectedId = Number(params.shift) || null;
-  const selected = selectedId ? await swapCandidates(member.id, selectedId) : null;
+  // Expire overdue requests first, so seats and candidates below never show a stale lock.
+  await expireOverdueSwaps();
+  const [swaps, seats, selected] = await Promise.all([
+    swapsForMember(member.id),
+    myTradableSeats(member.id),
+    selectedId ? swapCandidates(member.id, selectedId) : null,
+  ]);
 
   return (
     <>
@@ -80,7 +86,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
                     <>
                       <span className="font-medium">{formatLongDate(seat.date)}</span>
                       <span className="text-sm text-muted-foreground">
-                        {seat.locked ? "Sedang diproses" : `${seat.shiftLabel} · ${seat.areaName}`}
+                        {seat.locked ? "Sedang diproses" : seatLabel(seat)}
                       </span>
                     </>
                   );
@@ -110,7 +116,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
                 <div className="rounded-lg border border-border bg-card p-4">
                   <p className="mb-4 text-sm">
                     Shift kamu: <span className="font-medium">{formatLongDate(selected.mine.date)}</span>,{" "}
-                    {selected.mine.shiftLabel} · {selected.mine.areaName}
+                    {seatLabel(selected.mine)}
                   </p>
                   {selected.mine.locked ? (
                     <p className="text-sm text-muted-foreground">Shift ini sedang diproses permintaan lain.</p>
@@ -126,7 +132,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
                       candidates={selected.candidates.map((c) => ({
                         assignmentId: c.assignmentId,
                         nickname: c.nickname,
-                        seat: `${c.shiftLabel} · ${c.areaName}`,
+                        seat: seatLabel(c),
                         locked: c.locked,
                       }))}
                     />

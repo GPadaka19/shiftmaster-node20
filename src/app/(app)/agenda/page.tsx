@@ -1,13 +1,12 @@
 import { ClipboardList, CloudOff } from "lucide-react";
-import Link from "next/link";
-import { cn } from "cn";
 import { AgendaList } from "@/components/agenda/agenda-item";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { SheetFreshness } from "@/components/schedule/freshness";
+import { TabLink } from "@/components/tab-link";
 import { requireMember } from "@/lib/auth/session";
 import { getModeToday } from "@/lib/period/queries";
-import { groupByArea } from "@/lib/rooms/group";
+import { areaKey, groupByArea } from "@/lib/rooms/group";
 import { getRoomDirectory } from "@/lib/rooms/queries";
 import type { AgendaEntry } from "@/lib/sheets/agenda";
 import { getAgenda } from "@/lib/sheets/source";
@@ -19,8 +18,9 @@ const RANGES = [2, 3, 7] as const;
 
 export default async function AgendaPage({ searchParams }: PageProps<"/agenda">) {
   await requireMember();
+  const params = await searchParams;
   const { today } = await getModeToday();
-  const requested = Number((await searchParams).range);
+  const requested = Number(params.range);
   const days = RANGES.includes(requested as (typeof RANGES)[number]) ? requested : 3;
   const lastDay = addDaysIso(today, days - 1);
 
@@ -46,17 +46,9 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
 
       <nav aria-label="Rentang hari" className="mb-6 inline-flex gap-1 rounded-lg border border-border bg-muted p-0.5">
         {RANGES.map((range) => (
-          <Link
-            key={range}
-            href={`/agenda?range=${range}`}
-            aria-current={range === days ? "page" : undefined}
-            className={cn(
-              "flex h-9 items-center rounded-md border px-3 text-sm font-medium",
-              range === days ? "border-border bg-card text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
+          <TabLink key={range} href={`/agenda?range=${range}`} active={range === days} variant="boxed">
             {range} hari
-          </Link>
+          </TabLink>
         ))}
       </nav>
 
@@ -77,7 +69,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
                 {date === today && <span className="ml-2 text-sm font-normal text-brand-text">Hari ini</span>}
               </h2>
               {groupByArea(dayEntries, (entry) => entry.lab, directory, { keepOrder: true }).map((group) => (
-                <div key={group.area?.code ?? "lainnya"} className="grid gap-2">
+                <div key={areaKey(group)} className="grid gap-2">
                   <h3 className="text-sm font-medium text-muted-foreground">{group.area?.name ?? "Lainnya"}</h3>
                   <AgendaList entries={group.items} />
                 </div>

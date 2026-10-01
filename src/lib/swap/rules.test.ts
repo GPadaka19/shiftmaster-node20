@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { isPastDeadline, seatsChanged, swapBlockReason, swapDeadline, type SwapSide } from "./rules";
+import {
+  isPastDeadline,
+  poolCanSwap,
+  seatBlockReason,
+  seatLabel,
+  seatsChanged,
+  swapAvailable,
+  swapBlockReason,
+  swapDeadline,
+  type SwapSide,
+} from "./rules";
 
 const MORNING = 1;
 const AFTERNOON = 2;
@@ -53,6 +63,37 @@ describe("swapBlockReason", () => {
     expect(swapBlockReason({ ...mine, pool: "pkl" }, { ...theirs, pool: "pkl" }, NOW)).toMatch(/PKL/);
     expect(swapBlockReason(mine, { ...theirs, shiftId: MORNING }, NOW)).toMatch(/Pagi ↔ Siang/);
     expect(swapBlockReason(mine, theirs, new Date("2026-10-05T17:00:00Z"))).toMatch(/batas waktu/);
+  });
+});
+
+describe("poolCanSwap / swapAvailable", () => {
+  it("lets only lab and studio staff trade", () => {
+    expect(poolCanSwap("lab")).toBe(true);
+    expect(poolCanSwap("studio")).toBe(true);
+    expect(poolCanSwap("pkl")).toBe(false);
+    expect(poolCanSwap(null)).toBe(false);
+  });
+
+  it("offers swaps only during lecture weeks", () => {
+    expect(swapAvailable("lecture", "lab")).toBe(true);
+    expect(swapAvailable("lecture", "studio")).toBe(true);
+    expect(swapAvailable("maintenance", "lab")).toBe(false);
+    expect(swapAvailable("lecture", "pkl")).toBe(false);
+    expect(swapAvailable("lecture", null)).toBe(false);
+  });
+});
+
+describe("seatBlockReason", () => {
+  it("names why a seat outside lab and studio cannot be offered", () => {
+    expect(seatBlockReason(side(), NOW)).toBeNull();
+    expect(seatBlockReason(side({ pool: "pkl" }), NOW)).toBe("Tugas PKL tidak bisa ditukar.");
+    expect(seatBlockReason(side({ pool: null }), NOW)).toBe("Anggota ini tidak masuk roster.");
+  });
+});
+
+describe("seatLabel", () => {
+  it("joins the shift and the area", () => {
+    expect(seatLabel({ shiftLabel: "Pagi", areaName: "G7 Lantai 3" })).toBe("Pagi · G7 Lantai 3");
   });
 });
 

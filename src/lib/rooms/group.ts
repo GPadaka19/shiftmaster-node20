@@ -27,6 +27,11 @@ export type AreaGroup<T> = {
   items: T[];
 };
 
+/** Stable key for a group, for React keys and element ids; "other" for unknown rooms. */
+export function areaKey(group: Pick<AreaGroup<unknown>, "area">): string {
+  return group.area?.code ?? "other";
+}
+
 /** "L 7.3.2" → "7.3.2", so labs and studios on the same floor sort together. */
 function roomNumber(code: string): string {
   const space = code.indexOf(" ");

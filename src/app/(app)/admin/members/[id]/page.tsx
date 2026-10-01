@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ROLE_LABEL } from "@/lib/auth/roles";
+import { ROLE_LABEL, usesPin } from "@/lib/auth/roles";
 import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { auditLog, members } from "@/lib/db/schema";
@@ -36,16 +36,17 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
   if (!Number.isInteger(id)) notFound();
   const justCreated = (await searchParams).created === "1";
 
-  const [member] = await db.select().from(members).where(eq(members.id, id));
+  const [[member], history] = await Promise.all([
+    db.select().from(members).where(eq(members.id, id)),
+    db
+      .select({ action: auditLog.action, createdAt: auditLog.createdAt, actor: actor.nickname })
+      .from(auditLog)
+      .leftJoin(actor, eq(auditLog.actorId, actor.id))
+      .where(eq(auditLog.subject, `member:${id}`))
+      .orderBy(desc(auditLog.createdAt))
+      .limit(10),
+  ]);
   if (!member) notFound();
-
-  const history = await db
-    .select({ action: auditLog.action, createdAt: auditLog.createdAt, actor: actor.nickname })
-    .from(auditLog)
-    .leftJoin(actor, eq(auditLog.actorId, actor.id))
-    .where(eq(auditLog.subject, `member:${id}`))
-    .orderBy(desc(auditLog.createdAt))
-    .limit(10);
 
   const pinLocked = member.pinLockedUntil !== null && member.pinLockedUntil > new Date();
 
@@ -70,7 +71,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
         {justCreated && (
           <Alert>
             <AlertDescription>
-              Anggota ditambahkan.{member.role === "staff" ? " Atur PIN di bawah supaya bisa login." : " Login lewat Google dengan email yang didaftarkan."}
+              Anggota ditambahkan.{usesPin(member.role) ? " Atur PIN di bawah supaya bisa login." : " Login lewat Google dengan email yang didaftarkan."}
             </AlertDescription>
           </Alert>
         )}
@@ -97,7 +98,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
           </CardContent>
         </Card>
 
-        {member.role === "staff" && (
+        {usesPin(member.role) && (
           <Card>
             <CardHeader>
               <CardTitle>PIN</CardTitle>

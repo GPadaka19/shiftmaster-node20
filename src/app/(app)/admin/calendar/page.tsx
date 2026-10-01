@@ -21,8 +21,10 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
   const { today } = await getModeToday();
   const editId = Number((await searchParams).period) || undefined;
 
-  const allPeriods = await db.select().from(periods).orderBy(desc(periods.startDate));
-  const upcomingHolidays = await db.select().from(holidays).where(gte(holidays.date, today)).orderBy(asc(holidays.date));
+  const [allPeriods, upcomingHolidays] = await Promise.all([
+    db.select().from(periods).orderBy(desc(periods.startDate)),
+    db.select().from(holidays).where(gte(holidays.date, today)).orderBy(asc(holidays.date)),
+  ]);
   const editing = allPeriods.find((p) => p.id === editId);
 
   return (

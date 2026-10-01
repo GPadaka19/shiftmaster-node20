@@ -1,3 +1,4 @@
+import type { Mode } from "@/lib/period/resolve";
 import type { AreaInfo } from "@/lib/rooms/group";
 
 // Pure helpers over one roster week's assignments, shared by the today and roster pages.
@@ -25,7 +26,7 @@ export type RosterWeek = {
   id: number;
   /** Monday, "yyyy-MM-dd" */
   weekStart: string;
-  mode: "lecture" | "maintenance";
+  mode: Mode;
   assignments: RosterAssignment[];
 };
 

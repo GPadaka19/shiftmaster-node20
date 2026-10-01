@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { areas, memberG2Locks, memberPatterns, members, settings, shifts } from "@/lib/db/schema";
 import type { FormState } from "@/lib/forms";
+import { MAX_G2_DEFAULT_SETTING } from "@/lib/roster/constants";
 
 const WEEKDAYS = [1, 2, 3, 4, 5] as const;
 
@@ -30,9 +31,9 @@ export async function saveDefaultMaxG2(_previous: FormState, formData: FormData)
   await db.transaction(async (tx) => {
     await tx
       .insert(settings)
-      .values({ key: "max_g2_per_week_default", value: cap })
+      .values({ key: MAX_G2_DEFAULT_SETTING, value: cap })
       .onConflictDoUpdate({ target: settings.key, set: { value: cap } });
-    await writeAudit({ actorId: actor.id, action: "rules.default_g2", subject: "settings:max_g2_per_week_default", detail: { value: cap } }, tx);
+    await writeAudit({ actorId: actor.id, action: "rules.default_g2", subject: `settings:${MAX_G2_DEFAULT_SETTING}`, detail: { value: cap } }, tx);
   });
   revalidate();
   return { success: `Batas G2 default sekarang ${cap} per minggu.` };
@@ -45,11 +46,15 @@ export async function saveDefaultMaxG2(_previous: FormState, formData: FormData)
  */
 export async function saveMemberRules(memberId: number, _previous: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireRole("admin");
-  const [member] = await db.select({ pool: members.pool, nickname: members.nickname }).from(members).where(eq(members.id, memberId));
+  const [[member], lectureShifts, allAreas] = await Promise.all([
+    db.select({ pool: members.pool, nickname: members.nickname }).from(members).where(eq(members.id, memberId)),
+    db.select().from(shifts).where(eq(shifts.mode, "lecture")),
+    db.select().from(areas),
+  ]);
   if (!member?.pool) return { error: "Anggota ini tidak masuk roster." };
 
-  const shiftByCode = new Map((await db.select().from(shifts).where(eq(shifts.mode, "lecture"))).map((s) => [s.code, s.id]));
-  const areaByCode = new Map((await db.select().from(areas)).map((a) => [a.code, a]));
+  const shiftByCode = new Map(lectureShifts.map((s) => [s.code, s.id]));
+  const areaByCode = new Map(allAreas.map((a) => [a.code, a]));
 
   const patterns: (typeof memberPatterns.$inferInsert)[] = [];
   const locks: (typeof memberG2Locks.$inferInsert)[] = [];

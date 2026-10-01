@@ -6,6 +6,7 @@ import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
 import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, PIN_PATTERN, verifyPin } from "@/lib/auth/pin";
+import { usesPin } from "@/lib/auth/roles";
 import { createSession, endCurrentSession, requireMember, revokeMemberSessions } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { members } from "@/lib/db/schema";
@@ -29,7 +30,7 @@ const changePinSchema = z
 
 export async function changePin(_previous: ChangePinState, formData: FormData): Promise<ChangePinState> {
   const member = await requireMember();
-  if (member.role !== "staff") return { error: "Hanya akun staf yang memakai PIN." };
+  if (!usesPin(member.role)) return { error: "Hanya akun staf yang memakai PIN." };
 
   const parsed = changePinSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -39,8 +40,9 @@ export async function changePin(_previous: ChangePinState, formData: FormData): 
     return { error: "PIN lama salah." };
   }
 
+  const pinHash = await hashPin(parsed.data.newPin);
   await db.transaction(async (tx) => {
-    await tx.update(members).set({ pinHash: await hashPin(parsed.data.newPin) }).where(eq(members.id, member.id));
+    await tx.update(members).set({ pinHash }).where(eq(members.id, member.id));
     await writeAudit({ actorId: member.id, action: "member.pin.change", subject: `member:${member.id}` }, tx);
   });
 

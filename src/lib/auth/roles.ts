@@ -7,6 +7,11 @@ export function hasRole(role: Role, minimum: Role): boolean {
   return RANK[role] >= RANK[minimum];
 }
 
+/** Staff signs in with a PIN; admins with Google. */
+export function usesPin(role: Role): boolean {
+  return role === "staff";
+}
+
 export const ROLE_LABEL: Record<Role, string> = {
   superadmin: "Superadmin",
   admin: "Admin",

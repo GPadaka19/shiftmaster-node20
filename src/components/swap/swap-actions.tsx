@@ -1,24 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { cn } from "cn";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { decideSwapRequest } from "@/app/(app)/admin/swaps/actions";
 import { answerSwap, submitSwapRequest, withdrawSwap } from "@/app/(app)/swaps/actions";
+import { useAction } from "@/hooks/use-action";
 import { useFormAction } from "@/hooks/use-form-action";
-import type { FormState } from "@/lib/forms";
-
-function useAction() {
-  const [pending, startTransition] = useTransition();
-  const [state, setState] = useState<FormState>({});
-  const run = (action: () => Promise<FormState>, confirmText?: string) => {
-    if (confirmText && !window.confirm(confirmText)) return;
-    setState({});
-    startTransition(async () => setState(await action()));
-  };
-  return { pending, state, run };
-}
+import { SWAP_TEXT_MAX_LENGTH } from "@/lib/swap/rules";
 
 /** The target's answer. */
 export function AnswerButtons({ requestId }: { requestId: number }) {
@@ -71,7 +61,7 @@ export function DecideButtons({ requestId, canApprove }: { requestId: number; ca
         <input
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          maxLength={300}
+          maxLength={SWAP_TEXT_MAX_LENGTH}
           className="h-10 rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
         />
       </label>
@@ -134,7 +124,7 @@ export function SwapRequestForm({ myAssignmentId, candidates }: { myAssignmentId
         <textarea
           name="reason"
           rows={2}
-          maxLength={300}
+          maxLength={SWAP_TEXT_MAX_LENGTH}
           className="rounded-lg border border-input bg-transparent px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm"
         />
       </label>

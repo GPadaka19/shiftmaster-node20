@@ -30,3 +30,11 @@ export function g2RuleFor(member: RuleMember, weekStart: string, defaultMaxG2: n
   if (until) return { maxG2: 0, g7OnlyUntil: until };
   return { maxG2: member.pool === "lab" ? (member.maxG2PerWeek ?? defaultMaxG2) : member.maxG2PerWeek, g7OnlyUntil: null };
 }
+
+/** G2 locks that apply this week: a newcomer's lock would contradict their G7-only weeks. */
+export function applicableLocks<T extends { memberId: number }>(
+  locks: readonly T[],
+  members: ReadonlyMap<number, { g7OnlyUntil?: string | null }>,
+): T[] {
+  return locks.filter((lock) => !members.get(lock.memberId)?.g7OnlyUntil);
+}

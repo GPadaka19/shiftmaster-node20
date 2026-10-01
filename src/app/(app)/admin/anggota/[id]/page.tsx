@@ -13,15 +13,16 @@ import { db } from "@/lib/db";
 import { auditLog, members } from "@/lib/db/schema";
 import { formatDateTime } from "@/lib/time";
 import { setMemberPin, updateMember } from "../actions";
-import { ActiveToggle, MemberForm, PinForm } from "../member-forms";
+import { ActiveToggle, MemberForm, PinForm, ResetPinButton } from "../member-forms";
 
 export const metadata = { title: "Detail anggota" };
 
 const AUDIT_LABEL: Record<string, string> = {
-  "member.bootstrap": "Dibuat sebagai superadmin pertama",
+  "member.bootstrap": "Dibuat saat instalasi awal",
   "member.create": "Ditambahkan",
   "member.update": "Data diubah",
   "member.pin.set": "PIN diatur oleh superadmin",
+  "member.pin.reset": "PIN dikembalikan ke PIN awal",
   "member.pin.change": "PIN diganti sendiri",
   "member.activate": "Diaktifkan",
   "member.deactivate": "Dinonaktifkan",
@@ -103,13 +104,18 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
               <CardDescription>
                 {pinLocked
                   ? "Terkunci karena terlalu banyak salah PIN. Mengatur PIN baru membuka kuncian."
-                  : member.pinHash
-                    ? "PIN sudah diatur. Mengatur ulang mengeluarkan anggota dari semua perangkat."
-                    : "PIN belum diatur, jadi anggota belum bisa login."}
+                  : !member.pinHash
+                    ? "PIN belum diatur, jadi anggota belum bisa login."
+                    : member.pinMustChange
+                      ? "Anggota belum membuat PIN sendiri. Saat login nanti, mereka wajib menggantinya."
+                      : "Anggota sudah memakai PIN sendiri. Mengatur ulang mengeluarkan mereka dari semua perangkat."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PinForm action={setMemberPin.bind(null, id)} />
+              <div className="grid gap-6">
+                <ResetPinButton memberId={id} />
+                <PinForm action={setMemberPin.bind(null, id)} />
+              </div>
             </CardContent>
           </Card>
         )}

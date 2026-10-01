@@ -38,7 +38,7 @@ export function PinForm({ next }: { next: string }) {
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
-          minLength={4}
+          minLength={6}
           maxLength={8}
           autoComplete="current-password"
           required

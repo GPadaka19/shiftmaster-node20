@@ -22,6 +22,13 @@
       "when": 1790866007381,
       "tag": "0002_member_started_on",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790866904786,
+      "tag": "0003_pin_must_change",
+      "breakpoints": true
     }
   ]
 }

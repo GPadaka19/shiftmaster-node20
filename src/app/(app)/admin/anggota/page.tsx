@@ -28,6 +28,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/an
       role: members.role,
       pool: members.pool,
       hasPin: sql<boolean>`${members.pinHash} IS NOT NULL`,
+      pinMustChange: members.pinMustChange,
       locked: sql<boolean>`COALESCE(${members.pinLockedUntil} > now(), false)`,
     })
     .from(members)
@@ -91,6 +92,10 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/an
                     ) : !member.hasPin ? (
                       <Badge variant="outline" className="text-muted-foreground">
                         PIN belum diatur
+                      </Badge>
+                    ) : member.pinMustChange ? (
+                      <Badge variant="outline" className="text-muted-foreground">
+                        Belum ganti PIN
                       </Badge>
                     ) : null)}
                 </div>

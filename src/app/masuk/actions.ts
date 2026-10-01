@@ -22,7 +22,7 @@ export type PinSignInState = {
 
 const pinSignInSchema = z.object({
   nickname: z.string().trim().min(1, "Isi nickname kamu."),
-  pin: z.string().regex(PIN_PATTERN, "PIN berupa 4–8 angka."),
+  pin: z.string().regex(PIN_PATTERN, "PIN berupa 6–8 angka."),
   next: z.string().optional(),
 });
 

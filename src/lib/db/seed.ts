@@ -28,7 +28,7 @@ async function seedDemo(db: Db) {
     })
     .onConflictDoUpdate({
       target: members.nicknameNormalized,
-      set: { pinHash: sql`excluded.pin_hash`, active: true, failedPinAttempts: 0, pinLockedUntil: null },
+      set: { pinHash: sql`excluded.pin_hash`, pinMustChange: false, active: true, failedPinAttempts: 0, pinLockedUntil: null },
     });
   console.info(`[seed] demo staff "${DEMO_STAFF.nickname}" ready (PIN is in src/lib/db/seed.ts)`);
 }

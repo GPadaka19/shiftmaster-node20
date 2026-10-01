@@ -75,7 +75,7 @@ export default async function AccountPage() {
           <Card>
             <CardHeader>
               <CardTitle>Ganti PIN</CardTitle>
-              <CardDescription>PIN berupa 4–8 angka. Setelah diganti, perangkat lain otomatis keluar.</CardDescription>
+              <CardDescription>PIN berupa 6–8 angka. Setelah diganti, perangkat lain otomatis keluar.</CardDescription>
             </CardHeader>
             <CardContent>
               <ChangePinForm />

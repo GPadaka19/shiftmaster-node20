@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { writeAudit } from "@/lib/audit";
+import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, isValidPin, normalizeNickname } from "@/lib/auth/pin";
 import { requireRole, revokeMemberSessions } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -49,7 +50,12 @@ export async function createMember(_previous: FormState, formData: FormData): Pr
     id = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(members)
-        .values({ ...parsed.data, nicknameNormalized: normalizeNickname(parsed.data.nickname) })
+        .values({
+          ...parsed.data,
+          nicknameNormalized: normalizeNickname(parsed.data.nickname),
+          // Staff can sign in straight away with the default PIN, then choose their own.
+          ...(parsed.data.role === "staff" ? { pinHash: await hashPin(DEFAULT_PIN), pinMustChange: true } : {}),
+        })
         .returning({ id: members.id });
       await writeAudit(
         {
@@ -131,7 +137,7 @@ export async function setMemberActive(id: number, active: boolean): Promise<Form
 export async function setMemberPin(id: number, _previous: FormState, formData: FormData): Promise<FormState> {
   const actor = await requireRole("superadmin");
   const pin = String(formData.get("pin") ?? "");
-  if (!isValidPin(pin)) return { fieldErrors: { pin: "PIN harus 4–8 angka." } };
+  if (!isValidPin(pin)) return { fieldErrors: { pin: "PIN harus 6–8 angka." } };
 
   const [member] = await db.select({ role: members.role }).from(members).where(eq(members.id, id));
   if (!member) return { error: "Anggota tidak ditemukan." };
@@ -140,7 +146,7 @@ export async function setMemberPin(id: number, _previous: FormState, formData: F
   await db.transaction(async (tx) => {
     await tx
       .update(members)
-      .set({ pinHash: await hashPin(pin), failedPinAttempts: 0, pinLockedUntil: null })
+      .set({ pinHash: await hashPin(pin), pinMustChange: true, failedPinAttempts: 0, pinLockedUntil: null })
       .where(eq(members.id, id));
     await writeAudit({ actorId: actor.id, action: "member.pin.set", subject: `member:${id}` }, tx);
   });
@@ -148,5 +154,26 @@ export async function setMemberPin(id: number, _previous: FormState, formData: F
 
   revalidatePath("/admin/anggota");
   revalidatePath(`/admin/anggota/${id}`);
-  return { success: "PIN diatur. Beri tahu anggota PIN barunya; kuncian percobaan juga sudah dibuka." };
+  return { success: "PIN diatur. Beri tahu anggota PIN barunya; mereka wajib menggantinya saat login. Kuncian percobaan juga sudah dibuka." };
+}
+
+/** Back to the default PIN, to be replaced at the next sign-in. For a staff member who forgot theirs. */
+export async function resetMemberPin(id: number): Promise<FormState> {
+  const actor = await requireRole("superadmin");
+  const [member] = await db.select({ role: members.role }).from(members).where(eq(members.id, id));
+  if (!member) return { error: "Anggota tidak ditemukan." };
+  if (member.role !== "staff") return { error: "Admin masuk dengan Google, tidak memakai PIN." };
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(members)
+      .set({ pinHash: await hashPin(DEFAULT_PIN), pinMustChange: true, failedPinAttempts: 0, pinLockedUntil: null })
+      .where(eq(members.id, id));
+    await writeAudit({ actorId: actor.id, action: "member.pin.reset", subject: `member:${id}` }, tx);
+  });
+  await revokeMemberSessions(id);
+
+  revalidatePath("/admin/anggota");
+  revalidatePath(`/admin/anggota/${id}`);
+  return { success: `PIN dikembalikan ke PIN awal (${DEFAULT_PIN}). Anggota wajib menggantinya saat login.` };
 }

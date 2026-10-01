@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { writeAudit } from "@/lib/audit";
+import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, PIN_PATTERN, verifyPin } from "@/lib/auth/pin";
 import { createSession, endCurrentSession, requireMember, revokeMemberSessions } from "@/lib/auth/session";
 import { db } from "@/lib/db";
@@ -18,12 +19,13 @@ export type ChangePinState = { error?: string; success?: string };
 
 const changePinSchema = z
   .object({
-    currentPin: z.string().regex(PIN_PATTERN, "PIN lama berupa 4–8 angka."),
-    newPin: z.string().regex(PIN_PATTERN, "PIN baru harus 4–8 angka."),
+    currentPin: z.string().regex(PIN_PATTERN, "PIN lama berupa 6–8 angka."),
+    newPin: z.string().regex(PIN_PATTERN, "PIN baru harus 6–8 angka."),
     confirmPin: z.string(),
   })
   .refine((data) => data.newPin === data.confirmPin, { message: "Konfirmasi PIN tidak sama." })
-  .refine((data) => data.newPin !== data.currentPin, { message: "PIN baru harus berbeda dari PIN lama." });
+  .refine((data) => data.newPin !== data.currentPin, { message: "PIN baru harus berbeda dari PIN lama." })
+  .refine((data) => data.newPin !== DEFAULT_PIN, { message: "Jangan pakai PIN awal. Pilih PIN lain." });
 
 export async function changePin(_previous: ChangePinState, formData: FormData): Promise<ChangePinState> {
   const member = await requireMember();

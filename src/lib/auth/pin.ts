@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import { PIN_LOCK_MINUTES, PIN_MAX_ATTEMPTS } from "./constants";
 
-/** 4–8 digits, so it can be typed on a phone's number pad. */
-export const PIN_PATTERN = /^\d{4,8}$/;
+/** 6–8 digits, so it can be typed on a phone's number pad. */
+export const PIN_PATTERN = /^\d{6,8}$/;
 
 export function isValidPin(pin: string): boolean {
   return PIN_PATTERN.test(pin);

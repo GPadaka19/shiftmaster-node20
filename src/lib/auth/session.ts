@@ -19,6 +19,8 @@ export type CurrentMember = {
   role: Role;
   pool: "lab" | "studio" | "pkl" | null;
   dutyLabel: string | null;
+  /** Staff with a PIN given by an admin must choose their own before using the app. */
+  pinMustChange: boolean;
 };
 
 /** Starts a session and sets the cookie. Server Actions and Route Handlers only. */
@@ -68,6 +70,7 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember | null> =>
       role: members.role,
       pool: members.pool,
       dutyLabel: members.dutyLabel,
+      pinMustChange: members.pinMustChange,
     })
     .from(sessions)
     .innerJoin(members, eq(sessions.memberId, members.id))
@@ -83,9 +86,11 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember | null> =>
   return member ?? null;
 });
 
+/** The signed-in member; sends them to /masuk, or to /ganti-pin while their PIN is one an admin gave them. */
 export async function requireMember(): Promise<CurrentMember> {
   const member = await getCurrentMember();
   if (!member) redirect("/masuk");
+  if (member.pinMustChange) redirect("/ganti-pin");
   return member;
 }
 

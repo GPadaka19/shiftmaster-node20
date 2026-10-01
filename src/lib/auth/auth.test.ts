@@ -14,12 +14,12 @@ describe("normalizeNickname", () => {
 
 describe("PIN", () => {
   it("accepts 4 to 8 digits only", () => {
-    expect(isValidPin("1234")).toBe(true);
+    expect(isValidPin("123456")).toBe(true);
     expect(isValidPin("12345678")).toBe(true);
-    expect(isValidPin("123")).toBe(false);
+    expect(isValidPin("12345")).toBe(false);
     expect(isValidPin("123456789")).toBe(false);
-    expect(isValidPin("12a4")).toBe(false);
-    expect(isValidPin(" 1234")).toBe(false);
+    expect(isValidPin("12a456")).toBe(false);
+    expect(isValidPin(" 123456")).toBe(false);
   });
 
   it("verifies against its hash", async () => {

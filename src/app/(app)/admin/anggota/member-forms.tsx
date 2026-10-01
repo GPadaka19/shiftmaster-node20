@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { FormState } from "@/lib/forms";
 import { NEWCOMER_WEEKS } from "@/lib/roster/newcomer";
-import { setMemberActive } from "./actions";
+import { DEFAULT_PIN } from "@/lib/auth/constants";
+import { resetMemberPin, setMemberActive } from "./actions";
 
 export type MemberDefaults = {
   nickname: string;
@@ -110,14 +111,14 @@ export function PinForm({ action }: { action: (state: FormState, formData: FormD
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="grid max-w-sm gap-4">
-      <Field label="PIN baru" htmlFor="pin" error={state.fieldErrors?.pin} hint="4–8 angka. Anggota bisa menggantinya sendiri nanti.">
+      <Field label="PIN baru" htmlFor="pin" error={state.fieldErrors?.pin} hint="Atau atur PIN tertentu (6–8 angka). Anggota tetap wajib menggantinya saat login.">
         <Input
           id="pin"
           name="pin"
           type="password"
           inputMode="numeric"
           pattern="[0-9]*"
-          minLength={4}
+          minLength={6}
           maxLength={8}
           autoComplete="new-password"
           required
@@ -129,6 +130,30 @@ export function PinForm({ action }: { action: (state: FormState, formData: FormD
         {pending ? "Menyimpan…" : "Atur PIN"}
       </Button>
     </form>
+  );
+}
+
+/** For a staff member who forgot their PIN: back to the default, to be replaced at sign-in. */
+export function ResetPinButton({ memberId }: { memberId: number }) {
+  const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<FormState>({});
+
+  return (
+    <div className="grid gap-3">
+      <Button
+        type="button"
+        variant="outline"
+        disabled={pending}
+        className="h-11 justify-self-start px-4"
+        onClick={() => {
+          if (!window.confirm(`Kembalikan PIN anggota ini ke ${DEFAULT_PIN}? Mereka akan dikeluarkan dari semua perangkat.`)) return;
+          startTransition(async () => setState(await resetMemberPin(memberId)));
+        }}
+      >
+        {pending ? "Menyimpan…" : `Reset ke PIN awal (${DEFAULT_PIN})`}
+      </Button>
+      <FormMessage error={state.error} success={state.success} />
+    </div>
   );
 }
 

@@ -67,6 +67,8 @@ export const members = pgTable(
     /** Null uses the global default; 0 means G7 only. */
     maxG2PerWeek: smallint("max_g2_per_week"),
     pinHash: text(),
+    /** Set when the PIN was given by an admin (or is the default); cleared when the member picks their own. */
+    pinMustChange: boolean().notNull().default(false),
     failedPinAttempts: smallint().notNull().default(0),
     pinLockedUntil: timestamp({ withTimezone: true }),
     active: boolean().notNull().default(true),

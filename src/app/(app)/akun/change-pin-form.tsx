@@ -11,7 +11,7 @@ const PIN_INPUT = {
   type: "password",
   inputMode: "numeric",
   pattern: "[0-9]*",
-  minLength: 4,
+  minLength: 6,
   maxLength: 8,
   required: true,
   className: "h-11",

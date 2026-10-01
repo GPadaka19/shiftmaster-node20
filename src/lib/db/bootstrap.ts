@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { normalizeNickname } from "@/lib/auth/pin";
+import { DEFAULT_PIN } from "@/lib/auth/constants";
+import { hashPin, normalizeNickname } from "@/lib/auth/pin";
 import type { Db } from "./client";
 import { AREAS, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
 import { areas, auditLog, members, rooms, seatTemplates, settings, shifts } from "./schema";
@@ -84,6 +85,8 @@ export async function seedMembers(db: Db) {
   const [done] = await db.select({ key: settings.key }).from(settings).where(eq(settings.key, MEMBERS_SEEDED));
   if (done) return;
 
+  // Staff start with the default PIN and must choose their own at first sign-in.
+  const defaultPinHash = await hashPin(DEFAULT_PIN);
   let added = 0;
   for (const seed of MEMBERS) {
     const [created] = await db
@@ -95,6 +98,7 @@ export async function seedMembers(db: Db) {
         role: seed.role,
         email: seed.role === "admin" ? seed.email.toLowerCase() : null,
         pool: seed.role === "staff" ? seed.pool : null,
+        ...(seed.role === "staff" ? { pinHash: defaultPinHash, pinMustChange: true } : {}),
       })
       // Skips nicknames or emails that already exist.
       .onConflictDoNothing()

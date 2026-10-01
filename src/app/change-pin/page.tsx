@@ -17,7 +17,7 @@ export default async function ChoosePinPage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <Brand className="mb-10 text-lg" />
+        <Brand large className="mb-10 text-xl" />
         <h1 className="text-2xl font-semibold tracking-tight">Halo, {member.nickname}</h1>
         <p className="mt-1 mb-6 text-sm text-muted-foreground">
           Sebelum lanjut, buat PIN sendiri (6–8 angka). PIN dari admin tidak bisa dipakai lagi setelah ini.

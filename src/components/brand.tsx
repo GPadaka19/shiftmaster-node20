@@ -11,13 +11,13 @@ export function BrandMark({ className }: { className?: string }) {
       height={96}
       unoptimized
       priority
-      className={cn("size-6 rounded-md", className)}
+      className={cn("size-8 rounded-md", className)}
     />
   );
 }
 
 /**
- * The previous mark: two offset bars (the Pagi and Siang shifts) and a "now"
+ * The previous mark: two offset bars (the morning and afternoon shifts) and a "now"
  * dot. Kept for reference; the app uses BrandMark. Also in public/brand/logo-lama.svg.
  */
 export function LegacyBrandMark({ className }: { className?: string }) {
@@ -31,10 +31,11 @@ export function LegacyBrandMark({ className }: { className?: string }) {
   );
 }
 
-export function Brand({ className }: { className?: string }) {
+/** Logo and name. `large` is for the sign-in pages, where the brand stands alone. */
+export function Brand({ className, large = false }: { className?: string; large?: boolean }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-semibold tracking-tight", className)}>
-      <BrandMark />
+    <span className={cn("inline-flex items-center gap-2.5 font-semibold tracking-tight", large && "gap-3", className)}>
+      <BrandMark className={large ? "size-12 rounded-lg" : undefined} />
       ShiftMaster
     </span>
   );

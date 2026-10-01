@@ -19,7 +19,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/login">) 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
-        <Brand className="mb-10 text-lg" />
+        <Brand large className="mb-10 text-xl" />
         <h1 className="text-2xl font-semibold tracking-tight">Masuk</h1>
         <p className="mt-1 mb-6 text-sm text-muted-foreground">Staf masuk dengan nickname dan PIN. Admin masuk dengan Google.</p>
 

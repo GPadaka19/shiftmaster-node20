@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { normalizeNickname } from "@/lib/auth/pin";
 import type { Db } from "./client";
-import { AREAS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
+import { AREAS, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
 import { areas, auditLog, members, rooms, seatTemplates, settings, shifts } from "./schema";
 
 // What every install needs before anyone can sign in. Runs at server start in
@@ -72,4 +72,43 @@ export async function seedSuperadmin(db: Db, { email, nickname }: { email?: stri
     detail: { role: "superadmin" },
   });
   console.info(`[seed] superadmin created (member:${created.id})`);
+}
+
+const MEMBERS_SEEDED = "members_seeded_at";
+
+/**
+ * The starting team from seed-data.ts. Runs once per install: afterwards a
+ * renamed or removed member must not come back on the next restart.
+ */
+export async function seedMembers(db: Db) {
+  const [done] = await db.select({ key: settings.key }).from(settings).where(eq(settings.key, MEMBERS_SEEDED));
+  if (done) return;
+
+  let added = 0;
+  for (const seed of MEMBERS) {
+    const [created] = await db
+      .insert(members)
+      .values({
+        nickname: seed.nickname,
+        nicknameNormalized: normalizeNickname(seed.nickname),
+        fullName: seed.nickname,
+        role: seed.role,
+        email: seed.role === "admin" ? seed.email.toLowerCase() : null,
+        pool: seed.role === "staff" ? seed.pool : null,
+      })
+      // Skips nicknames or emails that already exist.
+      .onConflictDoNothing()
+      .returning({ id: members.id });
+    if (!created) continue;
+    added++;
+    await db.insert(auditLog).values({
+      actorId: null,
+      action: "member.bootstrap",
+      subject: `member:${created.id}`,
+      detail: { role: seed.role },
+    });
+  }
+
+  await db.insert(settings).values({ key: MEMBERS_SEEDED, value: new Date().toISOString() }).onConflictDoNothing();
+  console.info(`[seed] ${added} of ${MEMBERS.length} starting members added`);
 }

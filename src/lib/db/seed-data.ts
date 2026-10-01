@@ -31,6 +31,11 @@ export type ShiftSeed = {
 
 export type SeatSeed = { area: string; shift: string; capacity: number };
 
+/** Full names start as the nickname; admins can fill them in on the Anggota page. */
+export type MemberSeed =
+  | { nickname: string; role: "admin"; email: string }
+  | { nickname: string; role: "staff"; pool: "lab" | "studio" | "pkl" };
+
 export const AREAS: AreaSeed[] = [
   { code: "studio-g2", name: "Studio G2", building: "G2", kind: "studio", sortOrder: 10 },
   { code: "g2-l23", name: "G2 Lantai 2 & 3", building: "G2", kind: "floor", sortOrder: 20 },
@@ -111,3 +116,24 @@ export const SEATS: SeatSeed[] = [
 export const SETTINGS: Record<string, unknown> = {
   max_g2_per_week_default: 2,
 };
+
+// The team when the app went live. Added once per install (see seedMembers);
+// after that the Anggota page is the source of truth. PINs are set there too.
+const ADMINS = [
+  { nickname: "Ravenusa", email: "ravenusaarjuna@students.amikom.ac.id" },
+  { nickname: "Nanda", email: "fathimahananda@students.amikom.ac.id" },
+  { nickname: "Dian", email: "dianhasta@students.amikom.ac.id" },
+  { nickname: "Padaka", email: "padaka19@students.amikom.ac.id" },
+];
+const STAFF = {
+  studio: ["Bahar", "Gakkoi", "Labib", "Yazid"],
+  // Rifat and Rafif are PKL students but cover lab floors like regular lab staff.
+  lab: ["Nusa", "Thoriq", "Galang", "Uus", "Agung", "Latif", "Ahmad", "Nando", "Suryo", "Evan", "Rifat", "Rafif"],
+} as const;
+
+export const MEMBERS: MemberSeed[] = [
+  ...ADMINS.map((admin) => ({ ...admin, role: "admin" as const })),
+  ...(Object.entries(STAFF) as [keyof typeof STAFF, readonly string[]][]).flatMap(([pool, names]) =>
+    names.map((nickname) => ({ nickname, role: "staff" as const, pool })),
+  ),
+];

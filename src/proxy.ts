@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
 
+/** Pages anyone may open without signing in. */
+const PUBLIC_PATHS = new Set(["/login", "/privacy"]);
+
 /**
  * Optimistic check only: sends visitors without a session cookie to /login.
  * Whether the session is actually valid is checked against the database in
@@ -8,7 +11,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
  */
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  if (pathname === "/login" || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
+  if (PUBLIC_PATHS.has(pathname) || request.cookies.has(SESSION_COOKIE)) return NextResponse.next();
 
   const url = new URL("/login", request.url);
   if (pathname !== "/") url.searchParams.set("next", `${pathname}${search}`);

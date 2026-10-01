@@ -42,20 +42,21 @@ Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") 
 
 ## Deploy
 
-`Dockerfile` membangun image `output: "standalone"`. Container menjalankan migrasi
-database sendiri saat start (`RUN_MIGRATIONS=true`) dan menyediakan `GET /api/health`
-untuk healthcheck. Environment yang dibutuhkan ada di `.env.example`.
+Merge ke branch `production` men-deploy ke VPS lewat GitHub Actions (`.github/workflows/deploy.yml`).
+Stack di VPS ada di `docker-compose.yml`:
 
-### Cron roster mingguan
+- **App:** image `output: "standalone"`. Saat start, app menjalankan migrasi, mengisi konfigurasi
+  awal, dan membuat superadmin pertama.
+- **Postgres 17.**
+- **Halaman maintenance** saat app restart.
 
-Setiap Jumat 17:30 WIB, panggil endpoint ini dari cron di server (atau scheduler PaaS).
-Kalau roster minggu depan belum ada, aplikasi membuat dan menerbitkannya.
+Workflow lain:
 
-```
-30 17 * * 5  curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/weekly-roster
-```
+- `ci.yml`: lint, typecheck, test, dan build di `development`.
+- `weekly-roster.yml`: membuat roster minggu depan tiap Jumat 17:30 WIB.
 
-Jadwal cron di atas memakai zona waktu server. Kalau server memakai UTC, tulis `30 10 * * 5`.
+Langkah go-live, daftar GitHub Secrets, backup, dan pindah domain ada di
+[docs/GO-LIVE.md](docs/GO-LIVE.md).
 
 ## Catatan untuk yang melanjutkan
 

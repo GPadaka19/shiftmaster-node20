@@ -105,7 +105,7 @@ Next.js — 1 container
    ├─ Route Handlers      /api/health, /api/cron/weekly-roster
    ├─ lib/sheets ──OAuth──► Google Sheets (cache 15 menit + snapshot di DB)
    └─ lib/db ──────────────► Postgres — container kedua
-Cron di host ──► /api/cron/weekly-roster (dijaga CRON_SECRET)
+GitHub Actions (Jumat) ──► /api/cron/weekly-roster (dijaga CRON_SECRET)
 ```
 
 Next.js punya server sendiri, jadi peran Express (perantara, penyimpan roster, cron) dan
@@ -116,8 +116,8 @@ peran Go (Sheets, login) ditangani oleh satu aplikasi TypeScript:
 - **Sheets:** hasil parse di-cache di memori selama 15 menit. Setiap fetch yang berhasil juga
   disimpan ke `sheet_snapshots`. Kalau Sheets gagal atau server restart,
   aplikasi memakai snapshot terakhir dan menampilkan "Diperbarui HH:MM".
-- **Roster mingguan otomatis:** cron di host/PaaS memanggil `POST /api/cron/weekly-roster`
-  Jumat 17:30 WIB. Kalau cron luar tidak tersedia, pakai scheduler di `instrumentation.ts`.
+- **Roster mingguan otomatis:** workflow GitHub Actions terjadwal memanggil
+  `POST /api/cron/weekly-roster` Jumat 17:30 WIB.
   Kalau minggu depan belum punya roster, route ini men-generate dan menerbitkannya.
   Admin tetap bisa mengedit sesudahnya.
 - Email peminjam dari agenda **tidak pernah** dikirim ke browser.
@@ -411,10 +411,15 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Halaman Status (`/admin/status`): sinkron Sheets + ambil ulang, kode ruangan tak dikenal, status roster, cron.
 - Mengedit roster yang sudah terbit langsung berlaku (tercatat di audit log).
 
-**Fase 3 — Pindah**
-- Rotasi credentials Google Sheets (`docs/google-sheets-credentials.md`).
+**Fase 3 — Pindah** (persiapan teknis ✅ 1 Okt 2026; sisanya langkah operasional di `docs/GO-LIVE.md`)
+- ✅ Bootstrap produksi: migrasi + konfigurasi awal + superadmin pertama saat container start.
+- ✅ `docker-compose.yml` produksi (app, Postgres, halaman maintenance) yang bisa jalan berdampingan
+  dengan app lama; header keamanan dasar; skrip backup harian.
+- ✅ GitHub Actions: CI di `development`, deploy saat merge ke `production`, cron roster Jumat 17:30 WIB.
+- Rotasi credentials Google Sheets + OAuth client Web untuk login admin (`docs/google-sheets-credentials.md`).
+- Isi GitHub Secrets dan deploy pertama ke domain uji (mis. `shiftmaster-v2.gpadaka.com`).
 - Isi anggota, PIN, pola mingguan, periode, dan libur.
-- Jalan paralel dengan sistem lama di subdomain selama 1–2 minggu, cocokkan hasilnya.
+- Jalan paralel dengan sistem lama selama 1–2 minggu, cocokkan hasilnya.
 - Pindah domain, arsipkan `shiftmaster` dan `jadwal-lab-upt`.
 
 **Selesai (MVP)** = staf bisa login dan melihat shift hari ini, roster, jadwal lab, dan

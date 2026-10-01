@@ -137,3 +137,36 @@ export const MEMBERS: MemberSeed[] = [
     names.map((nickname) => ({ nickname, role: "staff" as const, pool })),
   ),
 ];
+
+/** One seat across the week: who sits in it Monday to Friday. */
+export type RosterRowSeed = {
+  area: string;
+  shift: string;
+  position?: number;
+  days: readonly [string, string, string, string, string];
+};
+
+// The first published roster, copied from the team's spreadsheet for the week
+// the app went live. Added once per install (see seedFirstRoster) and never
+// over an existing week; later weeks come from the generator or the editor.
+export const FIRST_ROSTER = {
+  weekStart: "2026-09-28",
+  rows: [
+    { area: "g7-l5", shift: "morning", days: ["Suryo", "Ahmad", "Galang", "Nusa", "Latif"] },
+    { area: "g7-l4", shift: "morning", days: ["Nusa", "Evan", "Latif", "Rifat", "Suryo"] },
+    { area: "g7-l6", shift: "morning", days: ["Latif", "Agung", "Suryo", "Ahmad", "Galang"] },
+    { area: "g7-l3", shift: "morning", days: ["Ahmad", "Uus", "Evan", "Rafif", "Thoriq"] },
+    { area: "g7-l3", shift: "afternoon", days: ["Uus", "Rafif", "Rifat", "Uus", "Agung"] },
+    { area: "g7-l4", shift: "afternoon", days: ["Evan", "Rifat", "Rafif", "Nando", "Evan"] },
+    { area: "g7-l5", shift: "afternoon", days: ["Rifat", "Nusa", "Agung", "Evan", "Rifat"] },
+    { area: "g7-l6", shift: "afternoon", days: ["Rafif", "Thoriq", "Nando", "Galang", "Rafif"] },
+    { area: "g2-l23", shift: "morning", days: ["Thoriq", "Galang", "Ahmad", "Agung", "Uus"] },
+    { area: "g2-l4", shift: "morning", days: ["Galang", "Latif", "Thoriq", "Latif", "Ahmad"] },
+    { area: "g2-l23", shift: "afternoon", days: ["Nando", "Suryo", "Nusa", "Suryo", "Nando"] },
+    { area: "g2-l4", shift: "afternoon", days: ["Agung", "Nando", "Uus", "Thoriq", "Nusa"] },
+    { area: "studio-g2", shift: "morning", position: 1, days: ["Labib", "Yazid", "Bahar", "Yazid", "Gakkoi"] },
+    { area: "studio-g2", shift: "morning", position: 2, days: ["Gakkoi", "Gakkoi", "Gakkoi", "Gakkoi", "Labib"] },
+    { area: "studio-g2", shift: "afternoon", position: 1, days: ["Bahar", "Bahar", "Labib", "Bahar", "Bahar"] },
+    { area: "studio-g2", shift: "afternoon", position: 2, days: ["Yazid", "Labib", "Yazid", "Labib", "Yazid"] },
+  ] satisfies RosterRowSeed[],
+};

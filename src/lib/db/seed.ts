@@ -6,7 +6,7 @@
 import { and, count, eq, sql } from "drizzle-orm";
 import { hashPin, normalizeNickname } from "@/lib/auth/pin";
 import { env } from "@/lib/env";
-import { seedConfiguration, seedMembers, seedSuperadmin } from "./bootstrap";
+import { seedConfiguration, seedFirstRoster, seedMembers, seedSuperadmin } from "./bootstrap";
 import { createDb, type Db } from "./client";
 import { areas, memberPatterns, members, shifts } from "./schema";
 
@@ -80,6 +80,7 @@ async function main() {
     await seedConfiguration(db);
     await seedSuperadmin(db, { email: env().BOOTSTRAP_SUPERADMIN_EMAIL, nickname: env().BOOTSTRAP_SUPERADMIN_NICKNAME });
     await seedMembers(db);
+    await seedFirstRoster(db);
     if (process.argv.includes("--demo")) {
       await seedDemo(db);
       await seedDemoRules(db);

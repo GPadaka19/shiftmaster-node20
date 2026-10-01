@@ -12,7 +12,7 @@ import { createDb, type Db } from "./client";
 import { areas, assignments, memberG2Locks, memberPatterns, members, rosterWeeks, shifts } from "./schema";
 
 /** Development-only account for trying the PIN login. */
-const DEMO_STAFF = { nickname: "demo", fullName: "Staf Demo", pin: "246810" } as const;
+const DEMO_STAFF = { nickname: "demo", fullName: "Staf Demo", pin: "191919" } as const;
 
 async function seedDemo(db: Db) {
   if (env().NODE_ENV === "production") throw new Error("--demo is not allowed in production");

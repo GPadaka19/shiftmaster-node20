@@ -26,7 +26,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {mode.period && <p className="truncate text-xs text-muted-foreground">{mode.period.name}</p>}
         </div>
         <div className="px-2">
-          <SidebarNav mode={mode.mode} />
+          <SidebarNav mode={mode.mode} role={member.role} />
         </div>
         <div className="mt-auto border-t border-sidebar-border px-4 py-3">
           <p className="truncate text-sm font-medium">{member.nickname}</p>

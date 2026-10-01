@@ -16,7 +16,7 @@ export function PageHeader({
       <div className="min-w-0 space-y-1">
         {eyebrow && <p className="text-sm text-muted-foreground">{eyebrow}</p>}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+        {description && <div className="text-sm text-muted-foreground">{description}</div>}
       </div>
       {actions}
     </header>

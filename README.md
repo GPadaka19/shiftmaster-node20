@@ -14,11 +14,14 @@ cp .env.example .env.local        # lalu isi nilainya
 psql -U postgres -c "create database shiftmaster_dev;"
 pnpm db:migrate                   # buat tabel
 pnpm db:seed                      # area, ruangan, shift, kursi + superadmin
-pnpm dev                          # http://localhost:3000
 ```
 
-- `pnpm db:seed --demo` menambah akun staf `demo` untuk mencoba login PIN. PIN-nya
-  tertulis di `src/lib/db/seed.ts`. Hanya untuk development.
+Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") di
+**https://shiftmaster.test** (port 5171). Tanpa EnvKit: `pnpm dev`.
+
+- `pnpm db:seed --demo` (development saja) menambah:
+  - akun staf `demo` untuk mencoba login PIN (PIN-nya tertulis di `src/lib/db/seed.ts`);
+  - 18 staf fiktif dan roster terbit untuk minggu ini dan minggu lalu.
 - Superadmin pertama dibuat dari `BOOTSTRAP_SUPERADMIN_EMAIL` saat `pnpm db:seed`.
   Login admin butuh `GOOGLE_CLIENT_ID` (lihat [docs/google-sheets-credentials.md](docs/google-sheets-credentials.md) bagian B).
 
@@ -30,7 +33,7 @@ pnpm dev                          # http://localhost:3000
 | `pnpm build` / `pnpm start` | Build dan jalankan versi produksi |
 | `pnpm typecheck` | `next typegen` + `tsc` |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Vitest (logika murni: auth, mode, seed data) |
+| `pnpm test` | Vitest (logika murni: auth, mode, parser Sheets, slot, roster, validasi) |
 | `pnpm db:generate` | Buat file migrasi dari perubahan `src/lib/db/schema.ts` |
 | `pnpm db:migrate` | Jalankan migrasi ke `DATABASE_URL` |
 | `pnpm db:seed` | Isi konfigurasi awal (hanya menambah yang belum ada) |

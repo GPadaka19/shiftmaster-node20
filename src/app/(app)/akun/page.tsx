@@ -1,24 +1,22 @@
-import { LogOut } from "lucide-react";
+import { ChevronRight, LogOut } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/page-header";
+import { adminItemsFor } from "@/components/shell/admin-items";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLE_LABEL } from "@/lib/auth/roles";
-import { requireMember, type CurrentMember } from "@/lib/auth/session";
+import { requireMember } from "@/lib/auth/session";
+import { POOL_LABEL } from "@/lib/members/labels";
 import { signOut } from "./actions";
 import { ChangePinForm } from "./change-pin-form";
 
 export const metadata = { title: "Akun" };
 
-const POOL_LABEL: Record<NonNullable<CurrentMember["pool"]>, string> = {
-  lab: "Lab (Gedung 2 & 7)",
-  studio: "Studio",
-  pkl: "PKL",
-};
-
 export default async function AccountPage() {
   const member = await requireMember();
+  const adminItems = adminItemsFor(member.role);
 
   return (
     <>
@@ -38,6 +36,30 @@ export default async function AccountPage() {
             </dl>
           </CardContent>
         </Card>
+
+        {adminItems.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Kelola</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="-my-1 divide-y divide-border">
+                {adminItems.map(({ href, label, description, icon: Icon }) => (
+                  <li key={href}>
+                    <Link href={href} className="flex min-h-14 items-center gap-3 py-2 hover:text-foreground">
+                      <Icon className="size-5 text-muted-foreground" aria-hidden="true" />
+                      <span className="flex-1">
+                        <span className="block font-medium">{label}</span>
+                        <span className="block text-muted-foreground">{description}</span>
+                      </span>
+                      <ChevronRight className="size-4 text-muted-foreground" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

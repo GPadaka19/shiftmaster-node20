@@ -19,14 +19,14 @@ import { MyWeek, RosterDayView, RosterTable } from "./roster-views";
 
 export const metadata = { title: "Roster" };
 
-type View = "hari" | "tabel";
-type Query = { minggu: string; tampilan: View; hari: number };
+type View = "day" | "table";
+type Query = { week: string; view: View; day: number };
 
 function hrefWith(query: Query, change: Partial<Query>): string {
   const next = { ...query, ...change };
-  const params = new URLSearchParams({ minggu: next.minggu });
-  if (next.tampilan === "tabel") params.set("tampilan", "tabel");
-  else params.set("hari", String(next.hari));
+  const params = new URLSearchParams({ week: next.week });
+  if (next.view === "table") params.set("view", "table");
+  else params.set("day", String(next.day));
   return `/roster?${params}`;
 }
 
@@ -37,16 +37,16 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
   const thisWeek = weekStartIso(today);
   const todayWeekday = isoWeekday(today);
 
-  const weekStart = isMondayIso(params.minggu) ? params.minggu : thisWeek;
-  const requestedDay = Number(params.hari);
+  const weekStart = isMondayIso(params.week) ? params.week : thisWeek;
+  const requestedDay = Number(params.day);
   const query: Query = {
-    minggu: weekStart,
-    tampilan: params.tampilan === "tabel" ? "tabel" : "hari",
-    hari:
+    week: weekStart,
+    view: params.view === "table" ? "table" : "day",
+    day:
       requestedDay >= 1 && requestedDay <= 5 ? requestedDay : weekStart === thisWeek && todayWeekday <= 5 ? todayWeekday : 1,
   };
   const dates = [0, 1, 2, 3, 4].map((offset) => addDaysIso(weekStart, offset));
-  const date = dates[query.hari - 1];
+  const date = dates[query.day - 1];
 
   const [week, holidays] = await Promise.all([getPublishedRosterWeek(weekStart), getHolidays(dates[0], dates[4])]);
 
@@ -63,16 +63,16 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
         <div className="flex items-center gap-1">
           {weekStart !== thisWeek && (
             <Button asChild variant="ghost" className="h-10 px-3">
-              <Link href={hrefWith(query, { minggu: thisWeek, hari: todayWeekday <= 5 ? todayWeekday : 1 })}>Minggu ini</Link>
+              <Link href={hrefWith(query, { week: thisWeek, day: todayWeekday <= 5 ? todayWeekday : 1 })}>Minggu ini</Link>
             </Button>
           )}
           <Button asChild variant="outline" size="icon" className="size-10">
-            <Link href={hrefWith(query, { minggu: addDaysIso(weekStart, -7) })} aria-label="Minggu sebelumnya">
+            <Link href={hrefWith(query, { week: addDaysIso(weekStart, -7) })} aria-label="Minggu sebelumnya">
               <ChevronLeft aria-hidden="true" />
             </Link>
           </Button>
           <Button asChild variant="outline" size="icon" className="size-10">
-            <Link href={hrefWith(query, { minggu: addDaysIso(weekStart, 7) })} aria-label="Minggu berikutnya">
+            <Link href={hrefWith(query, { week: addDaysIso(weekStart, 7) })} aria-label="Minggu berikutnya">
               <ChevronRight aria-hidden="true" />
             </Link>
           </Button>
@@ -99,9 +99,9 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
 
   // Timetable strips for each area in the day view (lecture weeks only).
   const roomsByArea = new Map<number, TimetableRoom[]>();
-  if (week.mode === "lecture" && query.tampilan === "hari") {
+  if (week.mode === "lecture" && query.view === "day") {
     const [timetable, directory] = await Promise.all([getTimetable(), getRoomDirectory()]);
-    const dayRooms = timetable.data?.find((d) => d.weekday === query.hari)?.rooms ?? [];
+    const dayRooms = timetable.data?.find((d) => d.weekday === query.day)?.rooms ?? [];
     for (const { area } of slots) {
       if (area.kind === "building" || roomsByArea.has(area.id)) continue;
       const keys = roomKeysForArea(area, directory);
@@ -123,34 +123,34 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
         {inRoster && <MyWeek week={week} memberId={member.id} dates={dates} holidays={holidays} />}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {query.tampilan === "hari" ? (
+          {query.view === "day" ? (
             <DayTabs
-              selected={query.hari}
+              selected={query.day}
               today={weekStart === thisWeek ? todayWeekday : 0}
-              hrefFor={(hari) => hrefWith(query, { hari })}
+              hrefFor={(day) => hrefWith(query, { day })}
               muted={dates.flatMap((d, i) => (holidays.has(d) ? [i + 1] : []))}
             />
           ) : (
             <span />
           )}
           <nav aria-label="Tampilan" className="inline-flex gap-1">
-            {(["hari", "tabel"] as const).map((view) => (
+            {(["day", "table"] as const).map((view) => (
               <Link
                 key={view}
-                href={hrefWith(query, { tampilan: view })}
-                aria-current={query.tampilan === view ? "page" : undefined}
+                href={hrefWith(query, { view })}
+                aria-current={query.view === view ? "page" : undefined}
                 className={cn(
                   "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-                  query.tampilan === view ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+                  query.view === view ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {view === "hari" ? "Per hari" : "Tabel"}
+                {view === "day" ? "Per hari" : "Tabel"}
               </Link>
             ))}
           </nav>
         </div>
 
-        {query.tampilan === "tabel" ? (
+        {query.view === "table" ? (
           <RosterTable week={week} dates={dates} slots={slots} memberId={member.id} holidays={holidays} today={today} />
         ) : (
           <section aria-label={formatLongDate(date)} className="grid gap-3">
@@ -166,7 +166,7 @@ export default async function RosterPage({ searchParams }: PageProps<"/roster">)
               slots={slots}
               memberId={member.id}
               roomsByArea={roomsByArea}
-              timings={date === today ? slotTimings(query.hari, todayWeekday, timeOfDay()) : undefined}
+              timings={date === today ? slotTimings(query.day, todayWeekday, timeOfDay()) : undefined}
             />
           </section>
         )}

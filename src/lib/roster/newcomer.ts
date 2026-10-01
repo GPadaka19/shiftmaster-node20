@@ -1,6 +1,6 @@
 import { addDaysIso, isoWeekday, weekStartIso } from "@/lib/time";
 
-// New lab staff work only in Gedung 7 for their first four roster weeks, so
+// New lab staff work only in building G7 for their first four roster weeks, so
 // they learn one building before covering G2. Studio staff are not affected.
 // Members without a start date (the team at go-live) are not newcomers.
 

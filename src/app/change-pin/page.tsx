@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { signOut } from "@/app/(app)/akun/actions";
+import { signOut } from "@/app/(app)/account/actions";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { getCurrentMember } from "@/lib/auth/session";
@@ -11,7 +11,7 @@ export const metadata = { title: "Buat PIN" };
 // they replace the PIN an admin gave them.
 export default async function ChoosePinPage() {
   const member = await getCurrentMember();
-  if (!member) redirect("/masuk");
+  if (!member) redirect("/login");
   if (!member.pinMustChange) redirect("/");
 
   return (

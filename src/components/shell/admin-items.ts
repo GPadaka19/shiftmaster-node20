@@ -1,7 +1,7 @@
 import { Activity, CalendarCog, CheckCheck, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
 import { hasRole, type Role } from "@/lib/auth/roles";
 
-// Not a client module, so the Akun page (server) and the sidebar (client) can
+// Not a client module, so the account page (server) and the sidebar (client) can
 // both use it.
 
 export type AdminItem = { href: string; label: string; description: string; icon: LucideIcon; minRole: Role };
@@ -15,21 +15,21 @@ export const ADMIN_ITEMS: AdminItem[] = [
     minRole: "admin",
   },
   {
-    href: "/admin/tukar",
+    href: "/admin/swaps",
     label: "Persetujuan Tukar",
     description: "Setujui atau tolak permintaan tukar shift",
     icon: CheckCheck,
     minRole: "admin",
   },
   {
-    href: "/admin/aturan",
+    href: "/admin/rules",
     label: "Aturan",
     description: "Pola Pagi/Siang, batas dan kunci G2",
     icon: ListChecks,
     minRole: "admin",
   },
   {
-    href: "/admin/kalender",
+    href: "/admin/calendar",
     label: "Kalender",
     description: "Periode kuliah/libur dan hari libur",
     icon: CalendarCog,
@@ -43,7 +43,7 @@ export const ADMIN_ITEMS: AdminItem[] = [
     minRole: "admin",
   },
   {
-    href: "/admin/anggota",
+    href: "/admin/members",
     label: "Anggota",
     description: "Tambah anggota, peran, dan PIN",
     icon: Users,

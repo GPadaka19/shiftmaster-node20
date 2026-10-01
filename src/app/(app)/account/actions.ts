@@ -12,7 +12,7 @@ import { members } from "@/lib/db/schema";
 
 export async function signOut(): Promise<void> {
   await endCurrentSession();
-  redirect("/masuk");
+  redirect("/login");
 }
 
 export type ChangePinState = { error?: string; success?: string };

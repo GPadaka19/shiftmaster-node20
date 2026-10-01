@@ -8,7 +8,7 @@ import type { SlotTiming } from "@/lib/schedule/slots";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
 import { WEEKDAY_NAMES, WEEKDAY_SHORT } from "@/lib/time";
 
-const SHIFT_ICON: Record<string, LucideIcon> = { pagi: Sun, siang: Sunset };
+const SHIFT_ICON: Record<string, LucideIcon> = { morning: Sun, afternoon: Sunset };
 
 type Slot = { area: AreaInfo; shift: ShiftInfo };
 type Holidays = Map<string, { name: string }>;

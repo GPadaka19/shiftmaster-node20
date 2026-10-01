@@ -11,7 +11,7 @@ import type { FormState } from "@/lib/forms";
 const WEEKDAYS = [1, 2, 3, 4, 5] as const;
 
 function revalidate() {
-  revalidatePath("/admin/aturan");
+  revalidatePath("/admin/rules");
   revalidatePath("/admin/roster");
 }
 

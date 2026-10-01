@@ -12,7 +12,7 @@ import { formatLongDate } from "@/lib/time";
 
 export const metadata = { title: "Tukar Shift" };
 
-export default async function SwapPage({ searchParams }: PageProps<"/tukar">) {
+export default async function SwapPage({ searchParams }: PageProps<"/swaps">) {
   const member = await requireMember();
   const params = await searchParams;
 
@@ -41,7 +41,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/tukar">) {
       />
 
       <div className="grid gap-8">
-        {params.terkirim === "1" && (
+        {params.sent === "1" && (
           <Alert>
             <AlertDescription>Permintaan terkirim. Sekarang menunggu jawaban rekanmu.</AlertDescription>
           </Alert>
@@ -90,7 +90,7 @@ export default async function SwapPage({ searchParams }: PageProps<"/tukar">) {
                         <div className="grid gap-0.5 rounded-lg border border-border px-4 py-3 opacity-50">{body}</div>
                       ) : (
                         <Link
-                          href={`/tukar?shift=${seat.assignmentId}`}
+                          href={`/swaps?shift=${seat.assignmentId}`}
                           aria-current={active ? "true" : undefined}
                           scroll={false}
                           className={cn(

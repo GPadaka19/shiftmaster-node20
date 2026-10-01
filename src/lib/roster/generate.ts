@@ -4,7 +4,7 @@ import { seededRandom, shuffled } from "./random";
 // Builds a lecture-mode roster for one week from the rules admins keep in the
 // app. It replaces the old rosterGenerator.ts, with the same rules:
 //
-//   - Everyone works the shift their weekly pattern says (Pagi/Siang).
+//   - Everyone works the shift their weekly pattern says (morning or afternoon).
 //   - Studio and PKL members, and anyone whose pattern names an area, sit there.
 //   - Lab members rotate over the floor areas of their shift:
 //       * G2 seats are shared out evenly, never above a member's G2 cap
@@ -19,7 +19,7 @@ export type GenArea = { id: number; name: string; building: "G2" | "G7"; kind: "
 export type GenShift = { id: number; label: string };
 export type GenSeat = { area: GenArea; shift: GenShift; capacity: number };
 export type GenMember = { id: number; nickname: string; pool: "lab" | "studio" | "pkl"; maxG2: number };
-/** weekday: 1 = Senin … 5 = Jumat. areaId null means "rotate me". */
+/** weekday: 1 = Monday … 5 = Friday. areaId null means "rotate me". */
 export type GenPattern = { memberId: number; weekday: number; shiftId: number; areaId: number | null };
 export type GenLock = { memberId: number; weekday: number };
 

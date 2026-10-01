@@ -1,6 +1,6 @@
 import type { AreaInfo } from "@/lib/rooms/group";
 
-// Pure helpers over one roster week's assignments, shared by Hari Ini and Roster.
+// Pure helpers over one roster week's assignments, shared by the today and roster pages.
 
 export type ShiftInfo = {
   id: number;
@@ -37,7 +37,7 @@ export function dutyOn(week: RosterWeek, memberId: number, date: string): Roster
   return week.assignments.find((a) => a.member.id === memberId && a.date === date) ?? null;
 }
 
-/** Everyone else in the same area on the same day, Pagi before Siang. */
+/** Everyone else in the same area on the same day, morning before afternoon. */
 export function teammatesOf(week: RosterWeek, duty: RosterAssignment): RosterAssignment[] {
   return week.assignments
     .filter((a) => a.date === duty.date && a.area.id === duty.area.id && a.member.id !== duty.member.id)

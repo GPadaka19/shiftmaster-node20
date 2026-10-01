@@ -26,7 +26,7 @@ export default async function NewMemberPage() {
 
 function BackLink() {
   return (
-    <Link href="/admin/anggota" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+    <Link href="/admin/members" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
       <ChevronLeft className="size-4" aria-hidden="true" />
       Anggota
     </Link>

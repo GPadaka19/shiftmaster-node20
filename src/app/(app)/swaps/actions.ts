@@ -7,8 +7,8 @@ import type { FormState } from "@/lib/forms";
 import { cancelSwap, requestSwap, respondToSwap, SwapError } from "@/lib/swap/service";
 
 function revalidate() {
-  revalidatePath("/tukar");
-  revalidatePath("/admin/tukar");
+  revalidatePath("/swaps");
+  revalidatePath("/admin/swaps");
   revalidatePath("/");
 }
 
@@ -34,7 +34,7 @@ export async function submitSwapRequest(myAssignmentId: number, _previous: FormS
     return {};
   });
   if (result.error) return result;
-  redirect("/tukar?terkirim=1");
+  redirect("/swaps?sent=1");
 }
 
 export async function answerSwap(requestId: number, accept: boolean): Promise<FormState> {

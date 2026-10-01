@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { isPastDeadline, seatsChanged, swapBlockReason, swapDeadline, type SwapSide } from "./rules";
 
-const PAGI = 1;
-const SIANG = 2;
+const MORNING = 1;
+const AFTERNOON = 2;
 
 const side = (overrides: Partial<SwapSide> = {}): SwapSide => ({
   assignmentId: 1,
@@ -13,7 +13,7 @@ const side = (overrides: Partial<SwapSide> = {}): SwapSide => ({
   weekMode: "lecture",
   weekPublished: true,
   areaId: 4,
-  shiftId: PAGI,
+  shiftId: MORNING,
   ...overrides,
 });
 
@@ -34,12 +34,12 @@ describe("swapDeadline", () => {
 
 describe("swapBlockReason", () => {
   const mine = side();
-  const theirs = side({ assignmentId: 2, memberId: 2, shiftId: SIANG, areaId: 2 });
+  const theirs = side({ assignmentId: 2, memberId: 2, shiftId: AFTERNOON, areaId: 2 });
 
   it("allows a same-day Pagi ↔ Siang trade inside one pool", () => {
     expect(swapBlockReason(mine, theirs, NOW)).toBeNull();
     const studioA = side({ pool: "studio" });
-    const studioB = side({ assignmentId: 2, memberId: 2, pool: "studio", shiftId: SIANG });
+    const studioB = side({ assignmentId: 2, memberId: 2, pool: "studio", shiftId: AFTERNOON });
     expect(swapBlockReason(studioA, studioB, NOW)).toBeNull();
   });
 
@@ -51,13 +51,13 @@ describe("swapBlockReason", () => {
     expect(swapBlockReason({ ...mine, weekMode: "maintenance" }, { ...theirs, weekMode: "maintenance" }, NOW)).toMatch(/masa kuliah/);
     expect(swapBlockReason(mine, { ...theirs, pool: "studio" }, NOW)).toMatch(/sesama pool/);
     expect(swapBlockReason({ ...mine, pool: "pkl" }, { ...theirs, pool: "pkl" }, NOW)).toMatch(/PKL/);
-    expect(swapBlockReason(mine, { ...theirs, shiftId: PAGI }, NOW)).toMatch(/Pagi ↔ Siang/);
+    expect(swapBlockReason(mine, { ...theirs, shiftId: MORNING }, NOW)).toMatch(/Pagi ↔ Siang/);
     expect(swapBlockReason(mine, theirs, new Date("2026-10-05T17:00:00Z"))).toMatch(/batas waktu/);
   });
 });
 
 describe("seatsChanged", () => {
-  const snapshot = { memberId: 1, areaId: 4, shiftId: PAGI };
+  const snapshot = { memberId: 1, areaId: 4, shiftId: MORNING };
 
   it("is false while both seats are as requested", () => {
     expect(seatsChanged({ snapshot, current: { ...snapshot } }, { snapshot, current: { ...snapshot } })).toBe(false);
@@ -66,7 +66,7 @@ describe("seatsChanged", () => {
   it("is true when a seat was deleted, moved or given to someone else", () => {
     expect(seatsChanged({ snapshot, current: null })).toBe(true);
     expect(seatsChanged({ snapshot, current: { ...snapshot, areaId: 5 } })).toBe(true);
-    expect(seatsChanged({ snapshot, current: { ...snapshot, shiftId: SIANG } })).toBe(true);
+    expect(seatsChanged({ snapshot, current: { ...snapshot, shiftId: AFTERNOON } })).toBe(true);
     expect(seatsChanged({ snapshot, current: { ...snapshot, memberId: 9 } })).toBe(true);
   });
 });

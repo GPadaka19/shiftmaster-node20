@@ -76,7 +76,7 @@ export default async function RulesPage() {
 
       {team.length === 0 ? (
         <EmptyState icon={Users} title="Belum ada anggota yang masuk roster">
-          <Link href="/admin/anggota" className="text-sm font-medium underline underline-offset-4">
+          <Link href="/admin/members" className="text-sm font-medium underline underline-offset-4">
             Tambah anggota dengan pool Lab, Studio, atau PKL
           </Link>
         </EmptyState>

@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { cn } from "cn";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
-import { decideSwapRequest } from "@/app/(app)/admin/tukar/actions";
-import { answerSwap, submitSwapRequest, withdrawSwap } from "@/app/(app)/tukar/actions";
+import { decideSwapRequest } from "@/app/(app)/admin/swaps/actions";
+import { answerSwap, submitSwapRequest, withdrawSwap } from "@/app/(app)/swaps/actions";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { FormState } from "@/lib/forms";
 

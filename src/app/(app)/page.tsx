@@ -36,7 +36,7 @@ import { formatLongDate, isoWeekday, timeOfDay, weekStartIso } from "@/lib/time"
 
 export const metadata = { title: "Hari Ini" };
 
-const SHIFT_ICON: Record<string, LucideIcon> = { pagi: Sun, siang: Sunset };
+const SHIFT_ICON: Record<string, LucideIcon> = { morning: Sun, afternoon: Sunset };
 
 export default async function TodayPage() {
   const member = await requireMember();
@@ -56,8 +56,8 @@ export default async function TodayPage() {
 async function SwapNotice({ memberId, isAdmin }: { memberId: number; isAdmin: boolean }) {
   const { incoming, awaitingAdmin } = await swapCounts(memberId, isAdmin);
   const notices = [
-    incoming > 0 && { href: "/tukar", text: `${incoming} permintaan tukar shift menunggu jawabanmu` },
-    awaitingAdmin > 0 && { href: "/admin/tukar", text: `${awaitingAdmin} permintaan tukar shift menunggu persetujuan admin` },
+    incoming > 0 && { href: "/swaps", text: `${incoming} permintaan tukar shift menunggu jawabanmu` },
+    awaitingAdmin > 0 && { href: "/admin/swaps", text: `${awaitingAdmin} permintaan tukar shift menunggu persetujuan admin` },
   ].filter((n): n is { href: string; text: string } => Boolean(n));
   if (notices.length === 0) return null;
   return (

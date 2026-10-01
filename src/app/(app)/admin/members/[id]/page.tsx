@@ -30,11 +30,11 @@ const AUDIT_LABEL: Record<string, string> = {
 
 const actor = alias(members, "actor");
 
-export default async function MemberDetailPage({ params, searchParams }: PageProps<"/admin/anggota/[id]">) {
+export default async function MemberDetailPage({ params, searchParams }: PageProps<"/admin/members/[id]">) {
   await requireRole("superadmin");
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
-  const justCreated = (await searchParams).baru === "1";
+  const justCreated = (await searchParams).created === "1";
 
   const [member] = await db.select().from(members).where(eq(members.id, id));
   if (!member) notFound();
@@ -51,7 +51,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
 
   return (
     <>
-      <Link href="/admin/anggota" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link href="/admin/members" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ChevronLeft className="size-4" aria-hidden="true" />
         Anggota
       </Link>

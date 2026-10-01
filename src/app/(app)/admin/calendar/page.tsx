@@ -16,10 +16,10 @@ import { DeleteButton, HolidayForm, PeriodForm } from "./calendar-forms";
 
 export const metadata = { title: "Kalender" };
 
-export default async function CalendarPage({ searchParams }: PageProps<"/admin/kalender">) {
+export default async function CalendarPage({ searchParams }: PageProps<"/admin/calendar">) {
   await requireRole("admin");
   const { today } = await getModeToday();
-  const editId = Number((await searchParams).periode) || undefined;
+  const editId = Number((await searchParams).period) || undefined;
 
   const allPeriods = await db.select().from(periods).orderBy(desc(periods.startDate));
   const upcomingHolidays = await db.select().from(holidays).where(gte(holidays.date, today)).orderBy(asc(holidays.date));
@@ -59,7 +59,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/k
                       <Badge variant={status === "Berjalan" ? "default" : "outline"}>{status}</Badge>
                       <div className="flex">
                         <Button asChild variant="ghost" size="icon" className="size-10 text-muted-foreground" title="Ubah">
-                          <Link href={`/admin/kalender?periode=${period.id}`} aria-label={`Ubah ${period.name}`}>
+                          <Link href={`/admin/calendar?period=${period.id}`} aria-label={`Ubah ${period.name}`}>
                             <Pencil aria-hidden="true" />
                           </Link>
                         </Button>

@@ -9,8 +9,8 @@ export async function decideSwapRequest(requestId: number, approve: boolean, not
   const admin = await requireRole("admin");
   try {
     const { expired } = await decideSwap({ requestId, adminId: admin.id, approve, note: note.trim().slice(0, 300) || null });
-    revalidatePath("/admin/tukar");
-    revalidatePath("/tukar");
+    revalidatePath("/admin/swaps");
+    revalidatePath("/swaps");
     revalidatePath("/roster");
     revalidatePath("/admin/roster");
     revalidatePath("/");

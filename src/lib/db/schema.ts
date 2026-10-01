@@ -60,7 +60,7 @@ export const members = pgTable(
     role: memberRole().notNull().default("staff"),
     /** Null means the member is never placed in a roster (admin only). */
     pool: memberPool(),
-    /** Shown on the admin's "Hari Ini" card, e.g. "Admin Gedung 2". */
+    /** Shown on the admin's card on the today page, e.g. "Admin Gedung 2". */
     dutyLabel: text(),
     /** First working day. Lab staff are G7-only for their first 4 roster weeks; null = not new. */
     startedOn: date(),
@@ -156,7 +156,7 @@ export const seatTemplates = pgTable(
 
 // ─── Roster rules ────────────────────────────────────────────────────────────
 
-/** Weekly pattern: which shift a member works on each weekday (1 = Senin). */
+/** Weekly pattern: which shift a member works on each weekday (1 = Monday). */
 export const memberPatterns = pgTable(
   "member_patterns",
   {

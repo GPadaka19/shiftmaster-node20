@@ -44,7 +44,7 @@ export function PeriodForm({ defaults }: { defaults?: PeriodDefaults }) {
         </Button>
         {defaults?.id && (
           <Button asChild variant="ghost" className="h-11 px-4">
-            <Link href="/admin/kalender">Batal</Link>
+            <Link href="/admin/calendar">Batal</Link>
           </Button>
         )}
       </div>

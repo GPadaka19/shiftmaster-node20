@@ -34,14 +34,14 @@ export default async function RosterEditorPage({ searchParams }: PageProps<"/adm
   const params = await searchParams;
   const { today } = await getModeToday();
   const thisWeek = weekStartIso(today);
-  const weekStart = isMondayIso(params.minggu) ? params.minggu : thisWeek;
+  const weekStart = isMondayIso(params.week) ? params.week : thisWeek;
   const dates = weekDates(weekStart);
 
   const week = await getWeekRecord(weekStart);
   const mode = week?.mode ?? (await modeOn(weekStart));
   const [seats, holidays, previous] = await Promise.all([seatsFor(mode), getHolidays(dates[0], dates[4]), previousRosterWeek(weekStart)]);
 
-  const href = (minggu: string) => `/admin/roster?minggu=${minggu}`;
+  const href = (week: string) => `/admin/roster?week=${week}`;
   const status = week ? week.status : "none";
 
   return (

@@ -9,7 +9,7 @@ import { PinForm } from "./pin-form";
 
 export const metadata = { title: "Masuk" };
 
-export default async function SignInPage({ searchParams }: PageProps<"/masuk">) {
+export default async function SignInPage({ searchParams }: PageProps<"/login">) {
   if (await getCurrentMember()) redirect("/");
 
   const { next } = await searchParams;

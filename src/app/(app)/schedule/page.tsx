@@ -26,15 +26,15 @@ const BUILDINGS = [
   { value: "g7", label: "Gedung 7" },
 ] as const;
 
-type Filters = { hari: number; gedung: string; q: string };
+type Filters = { day: number; building: string; q: string };
 
 function hrefWith(filters: Filters, change: Partial<Filters>): string {
   const next = { ...filters, ...change };
   const params = new URLSearchParams();
-  params.set("hari", String(next.hari));
-  if (next.gedung) params.set("gedung", next.gedung);
+  params.set("day", String(next.day));
+  if (next.building) params.set("building", next.building);
   if (next.q) params.set("q", next.q);
-  return `/jadwal?${params}`;
+  return `/schedule?${params}`;
 }
 
 /** "L 7.3.2" → "L732", so "732" or "l7.3" find it. */
@@ -50,26 +50,26 @@ function matches(room: TimetableRoom, query: string): boolean {
   );
 }
 
-export default async function TimetablePage({ searchParams }: PageProps<"/jadwal">) {
+export default async function TimetablePage({ searchParams }: PageProps<"/schedule">) {
   await requireMember();
   const params = await searchParams;
   const { today, mode } = await getModeToday();
   const todayWeekday = isoWeekday(today);
 
-  const requestedDay = Number(params.hari);
+  const requestedDay = Number(params.day);
   const filters: Filters = {
-    hari: requestedDay >= 1 && requestedDay <= 5 ? requestedDay : todayWeekday <= 5 ? todayWeekday : 1,
-    gedung: params.gedung === "g2" || params.gedung === "g7" ? params.gedung : "",
+    day: requestedDay >= 1 && requestedDay <= 5 ? requestedDay : todayWeekday <= 5 ? todayWeekday : 1,
+    building: params.building === "g2" || params.building === "g7" ? params.building : "",
     q: typeof params.q === "string" ? params.q.trim().slice(0, 60) : "",
   };
 
   const [timetable, directory] = await Promise.all([getTimetable(), getRoomDirectory()]);
-  const day = timetable.data?.find((d) => d.weekday === filters.hari);
+  const day = timetable.data?.find((d) => d.weekday === filters.day);
   const rooms = (day?.rooms ?? []).filter((room) => matches(room, filters.q));
   const groups = groupByArea(rooms, (room) => room.code, directory).filter(
-    (group) => !filters.gedung || group.area?.building.toLowerCase() === filters.gedung,
+    (group) => !filters.building || group.area?.building.toLowerCase() === filters.building,
   );
-  const timings = slotTimings(filters.hari, todayWeekday, timeOfDay());
+  const timings = slotTimings(filters.day, todayWeekday, timeOfDay());
 
   return (
     <>
@@ -85,26 +85,26 @@ export default async function TimetablePage({ searchParams }: PageProps<"/jadwal
       )}
 
       <div className="mb-6 grid gap-3">
-        <DayTabs selected={filters.hari} today={todayWeekday} hrefFor={(hari) => hrefWith(filters, { hari })} />
+        <DayTabs selected={filters.day} today={todayWeekday} hrefFor={(day) => hrefWith(filters, { day })} />
         <div className="flex flex-wrap items-center gap-2">
           <nav aria-label="Pilih gedung" className="inline-flex gap-1">
             {BUILDINGS.map((building) => (
               <Link
                 key={building.value}
-                href={hrefWith(filters, { gedung: building.value })}
-                aria-current={filters.gedung === building.value ? "page" : undefined}
+                href={hrefWith(filters, { building: building.value })}
+                aria-current={filters.building === building.value ? "page" : undefined}
                 className={cn(
                   "flex h-9 items-center rounded-md px-3 text-sm font-medium",
-                  filters.gedung === building.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
+                  filters.building === building.value ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {building.label}
               </Link>
             ))}
           </nav>
-          <form action="/jadwal" className="relative ml-auto w-full sm:w-72">
-            <input type="hidden" name="hari" value={filters.hari} />
-            {filters.gedung && <input type="hidden" name="gedung" value={filters.gedung} />}
+          <form action="/schedule" className="relative ml-auto w-full sm:w-72">
+            <input type="hidden" name="day" value={filters.day} />
+            {filters.building && <input type="hidden" name="building" value={filters.building} />}
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
               type="search"
@@ -128,7 +128,7 @@ export default async function TimetablePage({ searchParams }: PageProps<"/jadwal
         <EmptyState
           icon={SearchX}
           title="Tidak ada ruang yang cocok"
-          description={filters.q ? `Tidak ada hasil untuk "${filters.q}" di hari ${WEEKDAY_NAMES[filters.hari]}.` : undefined}
+          description={filters.q ? `Tidak ada hasil untuk "${filters.q}" di hari ${WEEKDAY_NAMES[filters.day]}.` : undefined}
         />
       ) : (
         <div className="grid gap-8">

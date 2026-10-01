@@ -23,7 +23,7 @@ const schema = z
 /** Replaces a PIN an admin gave out. The member just signed in with it, so the old PIN is not asked again. */
 export async function chooseOwnPin(_previous: ChooseOwnPinState, formData: FormData): Promise<ChooseOwnPinState> {
   const member = await getCurrentMember();
-  if (!member) redirect("/masuk");
+  if (!member) redirect("/login");
   if (!member.pinMustChange) redirect("/");
 
   const parsed = schema.safeParse(Object.fromEntries(formData));

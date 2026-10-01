@@ -74,8 +74,8 @@ export async function createMember(_previous: FormState, formData: FormData): Pr
     throw error;
   }
 
-  revalidatePath("/admin/anggota");
-  redirect(`/admin/anggota/${id}?baru=1`);
+  revalidatePath("/admin/members");
+  redirect(`/admin/members/${id}?created=1`);
 }
 
 export async function updateMember(id: number, _previous: FormState, formData: FormData): Promise<FormState> {
@@ -111,7 +111,7 @@ export async function updateMember(id: number, _previous: FormState, formData: F
   // A new role must take effect immediately, so existing sessions end.
   if ("role" in changed) await revokeMemberSessions(id);
 
-  revalidatePath("/admin/anggota");
+  revalidatePath("/admin/members");
   return { success: "Perubahan disimpan." };
 }
 
@@ -129,8 +129,8 @@ export async function setMemberActive(id: number, active: boolean): Promise<Form
   });
   if (!active) await revokeMemberSessions(id);
 
-  revalidatePath("/admin/anggota");
-  revalidatePath(`/admin/anggota/${id}`);
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${id}`);
   return { success: active ? "Anggota diaktifkan lagi." : "Anggota dinonaktifkan dan dikeluarkan dari semua perangkat." };
 }
 
@@ -152,8 +152,8 @@ export async function setMemberPin(id: number, _previous: FormState, formData: F
   });
   await revokeMemberSessions(id);
 
-  revalidatePath("/admin/anggota");
-  revalidatePath(`/admin/anggota/${id}`);
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${id}`);
   return { success: "PIN diatur. Beri tahu anggota PIN barunya; mereka wajib menggantinya saat login. Kuncian percobaan juga sudah dibuka." };
 }
 
@@ -173,7 +173,7 @@ export async function resetMemberPin(id: number): Promise<FormState> {
   });
   await revokeMemberSessions(id);
 
-  revalidatePath("/admin/anggota");
-  revalidatePath(`/admin/anggota/${id}`);
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${id}`);
   return { success: `PIN dikembalikan ke PIN awal (${DEFAULT_PIN}). Anggota wajib menggantinya saat login.` };
 }

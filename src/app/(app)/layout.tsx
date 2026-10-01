@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const isAdmin = hasRole(member.role, "admin");
   const counts = await swapCounts(member.id, isAdmin);
   const showSwap = mode.mode === "lecture" && (member.pool === "lab" || member.pool === "studio");
-  const badges = { "/tukar": counts.incoming, "/admin/tukar": counts.awaitingAdmin };
+  const badges = { "/swaps": counts.incoming, "/admin/swaps": counts.awaitingAdmin };
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">

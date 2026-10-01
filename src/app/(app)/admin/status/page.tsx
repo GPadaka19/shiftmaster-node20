@@ -139,10 +139,10 @@ export default async function StatusPage() {
           <CardContent>
             <dl className="grid gap-2 text-sm">
               <Row label={`Minggu ini (${formatWeekRange(thisWeek)})`}>
-                <Link href={`/admin/roster?minggu=${thisWeek}`}>{weekStatus(current)}</Link>
+                <Link href={`/admin/roster?week=${thisWeek}`}>{weekStatus(current)}</Link>
               </Row>
               <Row label={`Minggu depan (${formatWeekRange(nextWeek)})`}>
-                <Link href={`/admin/roster?minggu=${nextWeek}`}>{weekStatus(upcoming)}</Link>
+                <Link href={`/admin/roster?week=${nextWeek}`}>{weekStatus(upcoming)}</Link>
               </Row>
               <Row label="Cron">{config.CRON_SECRET ? "Dikonfigurasi" : "CRON_SECRET belum diisi"}</Row>
             </dl>

@@ -86,11 +86,11 @@ export const getCurrentMember = cache(async (): Promise<CurrentMember | null> =>
   return member ?? null;
 });
 
-/** The signed-in member; sends them to /masuk, or to /ganti-pin while their PIN is one an admin gave them. */
+/** The signed-in member; sends them to /login, or to /change-pin while their PIN is one an admin gave them. */
 export async function requireMember(): Promise<CurrentMember> {
   const member = await getCurrentMember();
-  if (!member) redirect("/masuk");
-  if (member.pinMustChange) redirect("/ganti-pin");
+  if (!member) redirect("/login");
+  if (member.pinMustChange) redirect("/change-pin");
   return member;
 }
 

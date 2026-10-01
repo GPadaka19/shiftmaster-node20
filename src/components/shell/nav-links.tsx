@@ -12,10 +12,10 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const TODAY: NavItem = { href: "/", label: "Hari Ini", icon: CalendarCheck };
 const ROSTER: NavItem = { href: "/roster", label: "Roster", icon: LayoutGrid };
-const TIMETABLE: NavItem = { href: "/jadwal", label: "Jadwal Lab", icon: CalendarDays };
+const TIMETABLE: NavItem = { href: "/schedule", label: "Jadwal Lab", icon: CalendarDays };
 const AGENDA: NavItem = { href: "/agenda", label: "Agenda", icon: ClipboardList };
-const ACCOUNT: NavItem = { href: "/akun", label: "Akun", icon: CircleUser };
-const SWAP: NavItem = { href: "/tukar", label: "Tukar", icon: ArrowLeftRight };
+const ACCOUNT: NavItem = { href: "/account", label: "Akun", icon: CircleUser };
+const SWAP: NavItem = { href: "/swaps", label: "Tukar", icon: ArrowLeftRight };
 
 /** Counts of things waiting on the member, by href. */
 export type NavBadges = Record<string, number>;
@@ -93,13 +93,13 @@ export function SidebarNav({ mode, role, showSwap, badges }: { mode: Mode; role:
 export function BottomNav({ mode, showSwap, badges }: { mode: Mode; showSwap: boolean; badges: NavBadges }) {
   const pathname = usePathname();
   const items = itemsFor(mode, showSwap);
-  // Admin approvals live under Akun on phones, so its badge shows there.
-  const badgeFor = (href: string) => (href === "/akun" ? badges["/admin/tukar"] : badges[href]);
+  // Admin approvals live under the account page on phones, so its badge shows there.
+  const badgeFor = (href: string) => (href === "/account" ? badges["/admin/swaps"] : badges[href]);
   return (
     <nav aria-label="Navigasi utama" className={cn("grid", items.length === 5 ? "grid-cols-5" : "grid-cols-4")}>
       {items.map(({ href, label, icon: Icon }) => {
-        // The bottom bar has no admin items; admin pages are reached from Akun.
-        const active = isActive(pathname, href) || (href === "/akun" && pathname.startsWith("/admin"));
+        // The bottom bar has no admin items; admin pages are reached from the account page.
+        const active = isActive(pathname, href) || (href === "/account" && pathname.startsWith("/admin"));
         return (
           <Link
             key={href}

@@ -20,7 +20,7 @@ const RANGES = [2, 3, 7] as const;
 export default async function AgendaPage({ searchParams }: PageProps<"/agenda">) {
   await requireMember();
   const { today } = await getModeToday();
-  const requested = Number((await searchParams).rentang);
+  const requested = Number((await searchParams).range);
   const days = RANGES.includes(requested as (typeof RANGES)[number]) ? requested : 3;
   const lastDay = addDaysIso(today, days - 1);
 
@@ -48,7 +48,7 @@ export default async function AgendaPage({ searchParams }: PageProps<"/agenda">)
         {RANGES.map((range) => (
           <Link
             key={range}
-            href={`/agenda?rentang=${range}`}
+            href={`/agenda?range=${range}`}
             aria-current={range === days ? "page" : undefined}
             className={cn(
               "flex h-9 items-center rounded-md border px-3 text-sm font-medium",

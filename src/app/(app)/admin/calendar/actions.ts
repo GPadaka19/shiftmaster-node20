@@ -43,7 +43,7 @@ export async function savePeriod(_previous: FormState, formData: FormData): Prom
   });
 
   revalidateAll();
-  redirect("/admin/kalender");
+  redirect("/admin/calendar");
 }
 
 export async function deletePeriod(id: number): Promise<void> {

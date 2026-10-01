@@ -16,9 +16,9 @@ export const metadata = { title: "Anggota" };
 
 const ROLE_ORDER = sql`CASE ${members.role} WHEN 'superadmin' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END`;
 
-export default async function MembersPage({ searchParams }: PageProps<"/admin/anggota">) {
+export default async function MembersPage({ searchParams }: PageProps<"/admin/members">) {
   await requireRole("superadmin");
-  const showInactive = (await searchParams).status === "nonaktif";
+  const showInactive = (await searchParams).status === "inactive";
 
   const rows = await db
     .select({
@@ -42,7 +42,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/an
         description="Staf, admin, dan superadmin yang bisa masuk ke ShiftMaster."
         actions={
           <Button asChild className="h-10 px-4">
-            <Link href="/admin/anggota/baru">
+            <Link href="/admin/members/new">
               <Plus aria-hidden="true" />
               Tambah anggota
             </Link>
@@ -52,8 +52,8 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/an
 
       <nav aria-label="Status anggota" className="mb-4 flex gap-1">
         {[
-          { label: "Aktif", href: "/admin/anggota", current: !showInactive },
-          { label: "Nonaktif", href: "/admin/anggota?status=nonaktif", current: showInactive },
+          { label: "Aktif", href: "/admin/members", current: !showInactive },
+          { label: "Nonaktif", href: "/admin/members?status=inactive", current: showInactive },
         ].map((tab) => (
           <Link
             key={tab.label}
@@ -76,7 +76,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/an
           {rows.map((member) => (
             <li key={member.id}>
               <Link
-                href={`/admin/anggota/${member.id}`}
+                href={`/admin/members/${member.id}`}
                 className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 transition-colors hover:bg-accent/50"
               >
                 <div className="min-w-0 flex-1">

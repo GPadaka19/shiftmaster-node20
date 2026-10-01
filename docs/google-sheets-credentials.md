@@ -42,7 +42,7 @@ Buka **Google Auth Platform → Audience** (di UI lama namanya "OAuth consent sc
 
 ### 4. Buat refresh token
 
-Dari folder `shiftmaster-fe`:
+Dari folder repo (`shiftmaster-node20`):
 
 ```bash
 node scripts/sheets-token.mjs ~/Downloads/client_secret_XXXX.json ~/secrets/google-oauth-token.json

@@ -6,8 +6,11 @@ sudah tidak dipakai, jadi tidak ada masa uji paralel atau pindah domain.
 ## Cara deploy bekerja
 
 - `development`: CI di setiap push (lint, typecheck, test, build Next.js, dan build image Docker).
-- `production`: Coolify menarik repo lewat GitHub App, build `Dockerfile`, lalu mengganti container lama
-  setelah container baru sehat (`/api/health`). Kalau build gagal, versi lama tetap jalan.
+- `production`: Coolify (self-hosted, dashboard hanya lewat Tailscale `http://100.64.50.20:8000`) build
+  `Dockerfile` dari repo publik `GPadaka19/shiftmaster-node20`, lalu mengganti container lama setelah container
+  baru sehat (`/api/health`). Kalau build gagal, versi lama tetap jalan.
+- **Deploy tidak otomatis.** GitHub tidak bisa menjangkau Coolify yang hanya ada di Tailscale, jadi setelah
+  merge ke `production` klik **Redeploy** di Coolify (atau lewat MCP/API Coolify).
 - Saat start, container menjalankan migrasi database, mengisi konfigurasi awal (area, ruangan, shift,
   kursi), membuat superadmin dari `BOOTSTRAP_SUPERADMIN_EMAIL`, dan mengisi tim awal dari
   `src/lib/db/seed-data.ts` (sekali saja per database).
@@ -36,10 +39,11 @@ Di Cloudflare, buat record `sm` ke IP server Coolify, dengan pengaturan yang sam
 
 ## 4. Aplikasi di Coolify
 
-1. Project yang sama → **+ New** → **Private Repository (with GitHub App)** → pilih `GPadaka19/shiftmaster-fe`.
+1. Project yang sama → **+ New** → **Public Repository** → `https://github.com/GPadaka19/shiftmaster-node20`.
 2. **Branch:** `production`. **Build Pack:** `Dockerfile`. **Ports Exposes:** `3000`.
 3. **Domains:** `https://sm.gpadaka.com`.
-4. **Health Check:** aktifkan, path `/api/health`, port `3000`.
+4. **Health Check:** aktifkan, host `127.0.0.1` (bukan `localhost`: di Alpine itu IPv6, sedangkan Next.js
+   hanya mendengarkan IPv4), path `/api/health`, port `3000`.
 5. **Environment Variables** (centang *Is Literal* untuk nilai yang berisi `$`):
 
 | Variabel | Isi |
@@ -57,11 +61,11 @@ Di Cloudflare, buat record `sm` ke IP server Coolify, dengan pengaturan yang sam
 
 6. **Deploy**. Pantau log build sampai container sehat, lalu buka `https://sm.gpadaka.com/api/health`.
    Hasilnya harus `{"status":"ok"}`.
-7. Pastikan **Auto Deploy** aktif, supaya setiap merge ke `production` langsung di-deploy.
+7. Setiap merge ke `production` berikutnya: klik **Redeploy** (deploy tidak otomatis, lihat di atas).
 
 ## 5. GitHub Secrets untuk cron roster
 
-Di `GPadaka19/shiftmaster-fe` → Settings → Secrets and variables → Actions:
+Di `GPadaka19/shiftmaster-node20` → Settings → Secrets and variables → Actions:
 
 | Secret | Isi |
 |---|---|
@@ -72,7 +76,7 @@ Lalu jalankan **Actions → Weekly roster → Run workflow** sekali untuk memast
 
 ## 6. Isi data (sekali, oleh superadmin/admin)
 
-Tim awal (admin dan staf) sudah dibuat otomatis. Urutannya penting, karena setiap langkah dipakai langkah berikutnya.
+Tim awal (admin dan staf) dan roster minggu go-live (28 Sep – 2 Okt) sudah dibuat otomatis. Urutannya penting, karena setiap langkah dipakai langkah berikutnya.
 
 1. **Masuk** lewat tab **Admin** dengan akun Google superadmin.
 2. **Anggota:**

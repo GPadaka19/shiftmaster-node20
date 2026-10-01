@@ -49,8 +49,9 @@ Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") 
 
 Produksi jalan di **Coolify** (`https://sm.gpadaka.com`):
 
-- **App:** Coolify build `Dockerfile` (`output: "standalone"`) setiap ada push ke branch `production`.
-  Saat start, app menjalankan migrasi, mengisi konfigurasi awal, superadmin pertama, dan tim awal.
+- **App:** Coolify (self-hosted, lewat Tailscale) build `Dockerfile` (`output: "standalone"`) dari branch
+  `production` saat di-**Redeploy**. Deploy tidak otomatis, karena GitHub tidak bisa menjangkau Coolify.
+  Saat start, app menjalankan migrasi, mengisi konfigurasi awal, superadmin pertama, tim awal, dan roster minggu go-live.
 - **Postgres 17:** resource database di Coolify, dengan backup terjadwal dari Coolify.
 - Environment variables diatur di Coolify, bukan di repo.
 

@@ -1,6 +1,6 @@
 # ShiftMaster v2 — Rencana Rewrite
 
-Dokumen ini jadi pegangan rewrite ShiftMaster dari nol di repo `shiftmaster-fe`.
+Dokumen ini jadi pegangan rewrite ShiftMaster dari nol di repo `shiftmaster-node20` (dulu `shiftmaster-fe`).
 Isinya: keputusan yang sudah diambil, arsitektur, data model, daftar halaman,
 arah visual, dan urutan pengerjaan. Kalau ada yang berubah, ubah dokumen ini dulu
 baru kodenya.
@@ -17,7 +17,7 @@ Referensi sistem lama (read-only, jangan diubah):
 
 | # | Keputusan | Catatan |
 |---|---|---|
-| 1 | Satu aplikasi **Next.js full-stack** di `shiftmaster-fe` | Tidak ada Express, tidak ada Go. Lihat bagian 3. |
+| 1 | Satu aplikasi **Next.js full-stack** di `shiftmaster-node20` | Tidak ada Express, tidak ada Go. Lihat bagian 3. |
 | 2 | Database **PostgreSQL, dibangun dari nol** | Tidak ada impor data lama. Anggota, pola, dan aturan diisi admin lewat aplikasi. |
 | 3 | Jadwal kuliah dan agenda lab **tetap dari Google Sheets** | Auth OAuth client + refresh token akun kampus (bukan service account). Cara membuatnya: `docs/google-sheets-credentials.md`. |
 | 4 | Mode **lecture** = masa perkuliahan, **maintenance** = libur semester | Fitur mode maintenance sama seperti sekarang: agenda lab + roster. Tidak ada checklist. |
@@ -49,7 +49,7 @@ Referensi sistem lama (read-only, jangan diubah):
 | Database | PostgreSQL + Drizzle ORM + drizzle-kit (migrasi skema) |
 | Validasi | zod |
 | Tanggal | date-fns v4 + `@date-fns/tz` (semua hitungan di `Asia/Jakarta`) |
-| Auth | Sesi buatan sendiri (desainnya diambil dari Go): token acak, disimpan sebagai hash SHA-256, cookie HttpOnly, berlaku 30 hari. PIN 6–8 angka, bcrypt. PIN awal `123456` (atau PIN dari admin) wajib diganti saat login pertama (`/ganti-pin`). Admin: verifikasi Google ID token (`google-auth-library`). |
+| Auth | Sesi buatan sendiri (desainnya diambil dari Go): token acak, disimpan sebagai hash SHA-256, cookie HttpOnly, berlaku 30 hari. PIN 6–8 angka, bcrypt. PIN awal `123456` (atau PIN dari admin) wajib diganti saat login pertama (`/change-pin`). Admin: verifikasi Google ID token (`google-auth-library`). |
 | Google Sheets | `google-auth-library` (OAuth2 + refresh token) + REST `values:batchGet` |
 | Test | Vitest untuk logika murni (parser, generator, validasi, mode). Playwright untuk smoke test belakangan. |
 | Deploy | Coolify: build `Dockerfile` (`output: "standalone"`) dari branch `production`, Postgres 17 sebagai resource Coolify |
@@ -99,7 +99,7 @@ Browser (HP staf / laptop admin)
    │  HTML + data halaman, submit form (Server Action)
    ▼
 Next.js — 1 container
-   ├─ proxy.ts            cek cookie sesi, arahkan ke /masuk
+   ├─ proxy.ts            cek cookie sesi, arahkan ke /login
    ├─ Halaman (Server Components)   baca DB + cache Sheets langsung di server
    ├─ Server Actions      ubah roster/anggota/aturan → cek role → audit log
    ├─ Route Handlers      /api/health, /api/cron/weekly-roster
@@ -138,14 +138,14 @@ src/
     (app)/layout.tsx            shell: sidebar/bottom nav + badge mode
     (app)/page.tsx              Hari Ini
     (app)/roster/page.tsx       roster minggu ini + riwayat
-    (app)/jadwal/page.tsx       jadwal lab mingguan (lecture)
+    (app)/schedule/page.tsx       jadwal lab mingguan (lecture)
     (app)/agenda/page.tsx       agenda lab (maintenance)
-    (app)/akun/                 profil, tema, ganti PIN, keluar
+    (app)/account/                 profil, tema, ganti PIN, keluar
     (app)/admin/...             lihat bagian 6
     api/health/route.ts
     api/cron/weekly-roster/route.ts
     manifest.ts, icon.png       PWA (bisa di-install); logo di public/brand, sumbernya logo.png
-  proxy.ts                      cek cookie sesi → /masuk
+  proxy.ts                      cek cookie sesi → /login
   instrumentation.ts            migrasi DB saat server start (RUN_MIGRATIONS=true)
   lib/
     auth/                       sesi, PIN, Google, role (fungsi murni + *.test.ts)
@@ -192,7 +192,7 @@ Aturan (desainnya diambil dari Go):
 - Admin/superadmin wajib login Google. Staf login nickname + PIN.
 - Ganti role, status aktif, atau PIN mencabut semua sesi anggota itu.
 - PIN yang diberikan admin (termasuk PIN awal `123456`) ditandai `pin_must_change`. Selama tanda itu ada,
-  `requireMember()` mengarahkan staf ke `/ganti-pin`, jadi tidak ada halaman atau aksi lain yang bisa dipakai.
+  `requireMember()` mengarahkan staf ke `/change-pin`, jadi tidak ada halaman atau aksi lain yang bisa dipakai.
 - Superadmin tidak bisa menurunkan atau menonaktifkan dirinya sendiri.
 
 ### Tempat
@@ -319,7 +319,7 @@ terlihat staf setelah diterbitkan.
 
 Navigasi: mobile = bottom bar 4 item, desktop = sidebar kiri. Badge mode di header
 ("Masa Kuliah" / "Libur Semester"). Semua state penting ada di URL
-(`/roster?minggu=2026-10-05&hari=selasa`) supaya bisa dibagikan.
+(`/roster?week=2026-10-05&day=2`) supaya bisa dibagikan.
 
 ### Staf (semua role)
 
@@ -327,28 +327,28 @@ Navigasi: mobile = bottom bar 4 item, desktop = sidebar kiri. Badge mode di head
 |---|---|---|
 | **Hari Ini** `/` | Kartu shift saya (shift, jam, area, rekan). Di bawahnya lab di area saya, masing-masing dengan 5 sesi dan penanda NOW/INCOMING. Varian: libur, PKL (satu gedung), admin (`duty_label`, 08:00–16:00), tidak bertugas. | Kartu tugas saya (gedung, 08:00–16:00) + agenda hari ini di gedung saya. |
 | **Roster** `/roster` | Roster minggu ini per hari: area → Pagi/Siang → lab + sesi. Area saya dibuka otomatis. Tampilan tabel minggu (area × hari). Pemilih minggu untuk riwayat. Tombol "Shift Saya" untuk ringkasan pribadi. Filter nama. | Sama, dikelompokkan per gedung (Studio G2 / Gedung 2 / Gedung 7). |
-| **Jadwal Lab** `/jadwal` | Jadwal kuliah mingguan: hari → gedung → lantai → lab × 5 slot. Filter gedung, lab, dosen. Hari ini terbuka otomatis. | Tidak tampil di navigasi. |
+| **Jadwal Lab** `/schedule` | Jadwal kuliah mingguan: hari → gedung → lantai → lab × 5 slot. Filter gedung, lab, dosen. Hari ini terbuka otomatis. | Tidak tampil di navigasi. |
 | **Agenda** `/agenda` | Tidak tampil di navigasi (URL tetap bisa diakses). | Agenda per tanggal, rentang 2/3/7 hari, dikelompokkan per lantai. Kegiatan maintenance diberi label. |
-| **Tukar** `/tukar` | Ajukan tukar (pilih shift sendiri → rekan di shift sebaliknya → alasan), jawab permintaan masuk, batalkan, riwayat. Hanya pool Lab/Studio. | Tidak tampil di navigasi. |
-| **Akun** `/akun` | Profil, ganti PIN, tema terang/gelap/sistem, keluar, link admin. | sama |
+| **Tukar** `/swaps` | Ajukan tukar (pilih shift sendiri → rekan di shift sebaliknya → alasan), jawab permintaan masuk, batalkan, riwayat. Hanya pool Lab/Studio. | Tidak tampil di navigasi. |
+| **Akun** `/account` | Profil, ganti PIN, tema terang/gelap/sistem, keluar, link admin. | sama |
 
 ### Admin dan superadmin
 
 | Halaman | Isi |
 |---|---|
 | `/admin/roster` | Editor minggu: grid area × hari, pilih anggota per kursi. "Generate draf", "Salin ke semua hari" (untuk maintenance), "Terbitkan". Banner pelanggaran aturan, panel Distribusi, hari libur diberi arsiran. |
-| `/admin/aturan` | Pola mingguan per anggota, cap G2, lock G2 per hari, default kuota. |
-| `/admin/kalender` | Periode (mode per rentang tanggal) + hari libur. |
+| `/admin/rules` | Pola mingguan per anggota, cap G2, lock G2 per hari, default kuota. |
+| `/admin/calendar` | Periode (mode per rentang tanggal) + hari libur. |
 | `/admin/status` | Kondisi sinkron Sheets (terakhir berhasil, error), tombol refresh, kode ruangan tak dikenal. |
-| `/admin/tukar` | Persetujuan tukar shift: setujui/tolak (dengan catatan), peringatan aturan roster setelah ditukar, riwayat. Jumlah yang menunggu tampil sebagai badge di navigasi. |
+| `/admin/swaps` | Persetujuan tukar shift: setujui/tolak (dengan catatan), peringatan aturan roster setelah ditukar, riwayat. Jumlah yang menunggu tampil sebagai badge di navigasi. |
 
 ### Superadmin saja
 
 | Halaman | Isi |
 |---|---|
-| `/admin/anggota` | Tambah/ubah anggota, role, pool, status aktif, mulai bertugas, atur PIN atau reset ke PIN awal. Semua tercatat di audit log. |
+| `/admin/members` | Tambah/ubah anggota, role, pool, status aktif, mulai bertugas, atur PIN atau reset ke PIN awal. Semua tercatat di audit log. |
 
-### Login `/masuk`
+### Login `/login`
 
 Dua pilihan: **Staf** (nickname + PIN, dengan hitung mundur lockout) dan **Admin** (tombol Google).
 
@@ -423,7 +423,7 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Validasi (`lib/roster/validate.ts`) dan Distribusi (`lib/roster/distribution.ts`), dengan test.
 - Cron `POST /api/cron/weekly-roster` (Bearer `CRON_SECRET`): kalau minggu depan belum punya roster, masa kuliah →
   generate + terbit; libur semester → salin minggu ini + terbit. Roster buatan admin tidak pernah ditimpa.
-- Halaman Aturan (`/admin/aturan`): batas G2 default, pola per anggota, batas & kunci G2, cakupan Pagi/Siang per hari.
+- Halaman Aturan (`/admin/rules`): batas G2 default, pola per anggota, batas & kunci G2, cakupan Pagi/Siang per hari.
 - Halaman Status (`/admin/status`): sinkron Sheets + ambil ulang, kode ruangan tak dikenal, status roster, cron.
 - Mengedit roster yang sudah terbit langsung berlaku (tercatat di audit log).
 
@@ -441,7 +441,7 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 **Fitur tambahan: Tukar shift** ✅ selesai 1 Okt 2026
 - Tabel `swap_requests` (migrasi `0001_swap_requests`), aturan di `lib/swap/rules.ts` (dengan test),
   layanan transaksional di `lib/swap/service.ts`.
-- Halaman `/tukar` (staf) dan `/admin/tukar` (admin), badge di navigasi, banner di Hari Ini.
+- Halaman `/swaps` (staf) dan `/admin/swaps` (admin), badge di navigasi, banner di Hari Ini.
 - Diuji: alur lengkap di browser, kunci per kursi, jawaban dari orang yang salah, tolak, batal,
   kedaluwarsa karena roster berubah dan karena lewat batas waktu.
 
@@ -452,6 +452,11 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
   selama 4 minggu roster pertama (`lib/roster/newcomer.ts`, dengan test). Mulai di akhir pekan dihitung dari Senin berikutnya.
   Generator memperlakukan batas G2-nya sebagai 0 dan mengabaikan kunci G2-nya. Editor roster dan preview tukar shift
   memberi peringatan kalau staf baru ditaruh di G2. Kosongkan tanggalnya untuk staf lama.
+
+**Live 1 Okt 2026** di `https://sm.gpadaka.com` (Coolify self-hosted lewat Tailscale)
+- Slug, query param, kode shift (`morning`/`afternoon`/`daily`, migrasi `0004`) dan komentar kode dalam bahasa Inggris;
+  teks UI tetap bahasa Indonesia.
+- Roster minggu go-live (28 Sep – 2 Okt) di-seed sekali dari `FIRST_ROSTER` di `seed-data.ts`.
 
 **Selesai (MVP)** = staf bisa login dan melihat shift hari ini, roster, jadwal lab, dan
 agenda. Admin bisa generate/edit/terbitkan roster serta mengatur periode dan libur.

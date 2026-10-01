@@ -28,6 +28,15 @@ export const roomKind = pgEnum("room_kind", ["lab", "studio", "virtual"]);
 export const rosterStatus = pgEnum("roster_status", ["draft", "published"]);
 export const rosterSource = pgEnum("roster_source", ["generated", "manual"]);
 export const sheetSource = pgEnum("sheet_source", ["timetable", "agenda"]);
+export const swapStatus = pgEnum("swap_status", [
+  "awaiting_target",
+  "awaiting_admin",
+  "approved",
+  "rejected",
+  "declined",
+  "cancelled",
+  "expired",
+]);
 
 const timestamps = {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
@@ -260,3 +269,52 @@ export const sheetSnapshots = pgTable("sheet_snapshots", {
   lastError: text(),
   lastErrorAt: timestamp({ withTimezone: true }),
 });
+
+// ─── Shift swaps ─────────────────────────────────────────────────────────────
+
+/**
+ * A request to trade seats on one day: the requester's assignment for the
+ * target's. The target accepts first, then one admin approves. The seats at
+ * request time are kept, so history survives roster edits; if an assignment
+ * changes or disappears before approval, the request no longer applies.
+ */
+export const swapRequests = pgTable(
+  "swap_requests",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    rosterWeekId: integer()
+      .notNull()
+      .references(() => rosterWeeks.id, { onDelete: "cascade" }),
+    date: date().notNull(),
+    requesterId: integer()
+      .notNull()
+      .references(() => members.id),
+    requesterAssignmentId: integer().references(() => assignments.id, { onDelete: "set null" }),
+    requesterAreaId: integer()
+      .notNull()
+      .references(() => areas.id),
+    requesterShiftId: integer()
+      .notNull()
+      .references(() => shifts.id),
+    targetId: integer()
+      .notNull()
+      .references(() => members.id),
+    targetAssignmentId: integer().references(() => assignments.id, { onDelete: "set null" }),
+    targetAreaId: integer()
+      .notNull()
+      .references(() => areas.id),
+    targetShiftId: integer()
+      .notNull()
+      .references(() => shifts.id),
+    reason: text(),
+    status: swapStatus().notNull().default("awaiting_target"),
+    targetRespondedAt: timestamp({ withTimezone: true }),
+    /** Who closed it: the target (declined), an admin (approved/rejected), or null (system). */
+    decidedBy: integer().references(() => members.id, { onDelete: "set null" }),
+    decidedAt: timestamp({ withTimezone: true }),
+    /** Admin's note on rejection, or why the system expired it. */
+    note: text(),
+    ...timestamps,
+  },
+  (t) => [index().on(t.status), index().on(t.requesterId), index().on(t.targetId), index().on(t.date)],
+);

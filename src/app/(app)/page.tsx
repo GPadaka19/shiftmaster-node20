@@ -1,4 +1,17 @@
-import { CalendarOff, ClipboardList, Clock, CloudOff, Coffee, MapPin, PartyPopper, ShieldCheck, Sun, Sunset, type LucideIcon } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarOff,
+  ClipboardList,
+  Clock,
+  CloudOff,
+  Coffee,
+  MapPin,
+  PartyPopper,
+  ShieldCheck,
+  Sun,
+  Sunset,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AgendaList } from "@/components/agenda/agenda-item";
@@ -8,6 +21,7 @@ import { PageHeader } from "@/components/page-header";
 import { SheetFreshness } from "@/components/schedule/freshness";
 import { RoomDayCard } from "@/components/schedule/room-card";
 import { Card, CardContent } from "@/components/ui/card";
+import { hasRole } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
 import { getHolidays, getModeToday } from "@/lib/period/queries";
 import { groupByArea, roomKeysForArea } from "@/lib/rooms/group";
@@ -17,6 +31,7 @@ import { dutyOn, teammatesOf, type RosterAssignment } from "@/lib/roster/view";
 import { slotTimings } from "@/lib/schedule/slots";
 import { roomKey } from "@/lib/sheets/cells";
 import { getAgenda, getTimetable } from "@/lib/sheets/source";
+import { swapCounts } from "@/lib/swap/service";
 import { formatLongDate, isoWeekday, timeOfDay, weekStartIso } from "@/lib/time";
 
 export const metadata = { title: "Hari Ini" };
@@ -31,8 +46,36 @@ export default async function TodayPage() {
     <>
       <AutoRefresh />
       <PageHeader eyebrow={formatLongDate(today)} title={`Halo, ${member.nickname}`} />
+      <SwapNotice memberId={member.id} isAdmin={hasRole(member.role, "admin")} />
       <TodayContent memberId={member.id} pool={member.pool} dutyLabel={member.dutyLabel} today={today} />
     </>
+  );
+}
+
+/** Swap requests waiting on this member (as target) or on any admin. */
+async function SwapNotice({ memberId, isAdmin }: { memberId: number; isAdmin: boolean }) {
+  const { incoming, awaitingAdmin } = await swapCounts(memberId, isAdmin);
+  const notices = [
+    incoming > 0 && { href: "/tukar", text: `${incoming} permintaan tukar shift menunggu jawabanmu` },
+    awaitingAdmin > 0 && { href: "/admin/tukar", text: `${awaitingAdmin} permintaan tukar shift menunggu persetujuan admin` },
+  ].filter((n): n is { href: string; text: string } => Boolean(n));
+  if (notices.length === 0) return null;
+  return (
+    <div className="mb-6 grid gap-2">
+      {notices.map((notice) => (
+        <Link
+          key={notice.href}
+          href={notice.href}
+          className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-sm font-medium hover:bg-accent/50"
+        >
+          <ArrowLeftRight className="size-4 text-muted-foreground" aria-hidden="true" />
+          <span className="flex-1">{notice.text}</span>
+          <span className="text-muted-foreground" aria-hidden="true">
+            →
+          </span>
+        </Link>
+      ))}
+    </div>
   );
 }
 

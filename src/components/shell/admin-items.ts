@@ -1,4 +1,4 @@
-import { Activity, CalendarCog, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
+import { Activity, CalendarCog, CheckCheck, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
 import { hasRole, type Role } from "@/lib/auth/roles";
 
 // Not a client module, so the Akun page (server) and the sidebar (client) can
@@ -12,6 +12,13 @@ export const ADMIN_ITEMS: AdminItem[] = [
     label: "Editor Roster",
     description: "Generate, ubah, dan terbitkan roster mingguan",
     icon: SquarePen,
+    minRole: "admin",
+  },
+  {
+    href: "/admin/tukar",
+    label: "Persetujuan Tukar",
+    description: "Setujui atau tolak permintaan tukar shift",
+    icon: CheckCheck,
     minRole: "admin",
   },
   {

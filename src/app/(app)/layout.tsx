@@ -7,11 +7,15 @@ import { hasRole, ROLE_LABEL } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
 import { MODE_LABEL } from "@/lib/period/resolve";
 import { getModeToday } from "@/lib/period/queries";
+import { swapCounts } from "@/lib/swap/service";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const member = await requireMember();
   const mode = await getModeToday();
   const isAdmin = hasRole(member.role, "admin");
+  const counts = await swapCounts(member.id, isAdmin);
+  const showSwap = mode.mode === "lecture" && (member.pool === "lab" || member.pool === "studio");
+  const badges = { "/tukar": counts.incoming, "/admin/tukar": counts.awaitingAdmin };
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
@@ -26,7 +30,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           {mode.period && <p className="truncate text-xs text-muted-foreground">{mode.period.name}</p>}
         </div>
         <div className="px-2">
-          <SidebarNav mode={mode.mode} role={member.role} />
+          <SidebarNav mode={mode.mode} role={member.role} showSwap={showSwap} badges={badges} />
         </div>
         <div className="mt-auto border-t border-sidebar-border px-4 py-3">
           <p className="truncate text-sm font-medium">{member.nickname}</p>
@@ -57,7 +61,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </main>
 
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">
-          <BottomNav mode={mode.mode} />
+          <BottomNav mode={mode.mode} showSwap={showSwap} badges={badges} />
         </div>
       </div>
     </div>

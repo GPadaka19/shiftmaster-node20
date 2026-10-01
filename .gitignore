@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# google credentials (keep outside the repo; see docs/google-sheets-credentials.md)
+client_secret_*.json
+google-oauth-*.json
 
 # vercel
 .vercel

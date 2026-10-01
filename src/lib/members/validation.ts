@@ -22,6 +22,10 @@ export const memberInputSchema = z
       .enum(["lab", "studio", "pkl", "none"], { message: "Pilih pool roster." })
       .transform((value) => (value === "none" ? null : value)),
     dutyLabel: optionalText(60),
+    startedOn: z
+      .union([z.literal(""), z.iso.date("Tanggal tidak valid.")])
+      .optional()
+      .transform((value) => value || null),
   })
   .refine((member) => member.role === "staff" || member.email !== null, {
     message: "Admin dan superadmin wajib punya email Google.",

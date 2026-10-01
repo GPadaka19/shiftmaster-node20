@@ -62,6 +62,8 @@ export const members = pgTable(
     pool: memberPool(),
     /** Shown on the admin's "Hari Ini" card, e.g. "Admin Gedung 2". */
     dutyLabel: text(),
+    /** First working day. Lab staff are G7-only for their first 4 roster weeks; null = not new. */
+    startedOn: date(),
     /** Null uses the global default; 0 means G7 only. */
     maxG2PerWeek: smallint("max_g2_per_week"),
     pinHash: text(),

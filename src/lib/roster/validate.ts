@@ -1,4 +1,4 @@
-import { WEEKDAY_NAMES } from "@/lib/time";
+import { formatShortDate, WEEKDAY_NAMES } from "@/lib/time";
 import type { GenArea, GenLock, GenSeat } from "./generate";
 
 // Checks a roster against the rules. Manual edits bypass the generator, so the
@@ -10,7 +10,13 @@ export type Violation = {
 };
 
 export type CheckedAssignment = { date: string; areaId: number; shiftId: number; memberId: number };
-export type CheckedMember = { nickname: string; active: boolean; maxG2: number | null };
+export type CheckedMember = {
+  nickname: string;
+  active: boolean;
+  maxG2: number | null;
+  /** Set while a new lab member may only work in G7 (see newcomer.ts). */
+  g7OnlyUntil?: string | null;
+};
 
 export type ValidationInput = {
   mode: "lecture" | "maintenance";
@@ -71,6 +77,14 @@ export function validateRoster(input: ValidationInput): Violation[] {
       if (area && isG2Floor(area)) g2.set(a.memberId, (g2.get(a.memberId) ?? 0) + 1);
     }
     for (const [id, count] of g2) {
+      const until = input.members.get(id)?.g7OnlyUntil;
+      if (until) {
+        violations.push({
+          severity: "warning",
+          message: `${name(id)} masih staf baru (G7 saja sampai ${formatShortDate(until)}), tapi dapat ${count} shift G2.`,
+        });
+        continue;
+      }
       const cap = input.members.get(id)?.maxG2;
       if (cap !== null && cap !== undefined && count > cap) {
         violations.push({ severity: "warning", message: `${name(id)}: ${count} shift G2 minggu ini (batas ${cap}).` });
@@ -79,6 +93,7 @@ export function validateRoster(input: ValidationInput): Violation[] {
 
     // G2 locks, for days the member works.
     for (const lock of input.locks) {
+      if (input.members.get(lock.memberId)?.g7OnlyUntil) continue;
       const date = input.dates[lock.weekday - 1];
       if (!date || input.holidays.has(date)) continue;
       const duty = input.assignments.find((a) => a.memberId === lock.memberId && a.date === date);

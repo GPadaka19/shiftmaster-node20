@@ -35,6 +35,7 @@ function readMemberForm(formData: FormData) {
     role: formData.get("role"),
     pool: formData.get("pool"),
     dutyLabel: formData.get("dutyLabel") ?? "",
+    startedOn: formData.get("startedOn") ?? "",
   });
 }
 

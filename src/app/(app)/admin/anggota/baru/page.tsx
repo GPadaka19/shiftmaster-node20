@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
 import { createMember } from "../actions";
-import { MemberForm } from "../member-forms";
+import { todayIso } from "@/lib/time";
+import { EMPTY_MEMBER, MemberForm } from "../member-forms";
 
 export const metadata = { title: "Tambah anggota" };
 
@@ -16,7 +17,7 @@ export default async function NewMemberPage() {
       <PageHeader title="Tambah anggota" description="Setelah disimpan, atur PIN untuk staf supaya bisa login." />
       <Card>
         <CardContent>
-          <MemberForm action={createMember} submitLabel="Simpan anggota" />
+          <MemberForm action={createMember} submitLabel="Simpan anggota" defaults={{ ...EMPTY_MEMBER, startedOn: todayIso() }} />
         </CardContent>
       </Card>
     </>

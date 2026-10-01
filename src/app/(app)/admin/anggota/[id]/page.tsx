@@ -90,6 +90,7 @@ export default async function MemberDetailPage({ params, searchParams }: PagePro
                 role: member.role,
                 pool: member.pool ?? "none",
                 dutyLabel: member.dutyLabel ?? "",
+                startedOn: member.startedOn ?? "",
               }}
             />
           </CardContent>

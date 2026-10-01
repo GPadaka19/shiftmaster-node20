@@ -6,6 +6,7 @@ import { writeAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { areas, assignments, memberG2Locks, members, rosterWeeks, shifts, swapRequests } from "@/lib/db/schema";
 import { getDefaultMaxG2, getEditorAssignments, seatsFor, weekDates } from "@/lib/roster/service";
+import { g2RuleFor } from "@/lib/roster/newcomer";
 import { validateRoster } from "@/lib/roster/validate";
 import { addDaysIso, todayIso } from "@/lib/time";
 import { ACTIVE_STATUSES, isPastDeadline, seatBlockReason, seatsChanged, swapBlockReason, type SwapSide, type SwapStatus } from "./rules";
@@ -460,10 +461,12 @@ export async function swapPreviewWarnings(requestId: number): Promise<string[]> 
     seatsFor("lecture"),
     db.select().from(memberG2Locks),
     getDefaultMaxG2(),
-    db.select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2: members.maxG2PerWeek, active: members.active }).from(members),
+    db
+      .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn, active: members.active })
+      .from(members),
   ]);
   const memberInfo = new Map(
-    team.map((m) => [m.id, { nickname: m.nickname, active: m.active, maxG2: m.pool === "lab" ? (m.maxG2 ?? defaultMaxG2) : m.maxG2 }]),
+    team.map((m) => [m.id, { nickname: m.nickname, active: m.active, ...g2RuleFor(m, week.weekStart, defaultMaxG2) }]),
   );
   const check = (list: typeof rows) =>
     validateRoster({ mode: "lecture", dates: weekDates(week.weekStart), seats, members: memberInfo, locks, holidays: new Set(), assignments: list })

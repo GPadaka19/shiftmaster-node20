@@ -15,6 +15,13 @@
       "when": 1790849217059,
       "tag": "0001_swap_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790866007381,
+      "tag": "0002_member_started_on",
+      "breakpoints": true
     }
   ]
 }

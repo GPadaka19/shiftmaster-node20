@@ -21,7 +21,8 @@ import {
   seatsFor,
   weekDates,
 } from "@/lib/roster/service";
-import { validateRoster, type Violation } from "@/lib/roster/validate";
+import { g2RuleFor } from "@/lib/roster/newcomer";
+import { validateRoster, type CheckedMember, type Violation } from "@/lib/roster/validate";
 import { addDaysIso, formatDateTime, formatWeekRange, isMondayIso, weekStartIso } from "@/lib/time";
 import { RosterEditor, type EditorRow, type EditorSeat } from "./roster-editor";
 import { WeekActions } from "./week-actions";
@@ -133,7 +134,7 @@ async function EditorSection({
   const [rows, team, locks, defaultMaxG2] = await Promise.all([
     getEditorAssignments(weekId),
     db
-      .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek })
+      .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn })
       .from(members)
       .where(eq(members.active, true))
       .orderBy(asc(members.nicknameNormalized)),
@@ -158,8 +159,9 @@ async function EditorSection({
     (dutyLabels[row.date] ??= {})[row.memberId] = `${row.area.name} ${row.shiftLabel}`;
   }
 
-  const capOf = (pool: string | null, own: number | null) => (pool === "lab" ? (own ?? defaultMaxG2) : own);
-  const memberInfo = new Map(team.map((m) => [m.id, { nickname: m.nickname, active: true, maxG2: capOf(m.pool, m.maxG2PerWeek) }]));
+  const memberInfo = new Map<number, CheckedMember>(
+    team.map((m) => [m.id, { nickname: m.nickname, active: true, ...g2RuleFor(m, weekStart, defaultMaxG2) }]),
+  );
   for (const row of rows) {
     if (!memberInfo.has(row.memberId)) memberInfo.set(row.memberId, { nickname: row.nickname, active: row.active, maxG2: null });
   }

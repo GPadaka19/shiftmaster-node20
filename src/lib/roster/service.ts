@@ -16,6 +16,7 @@ import {
 import { resolveMode, type Mode } from "@/lib/period/resolve";
 import { addDaysIso, formatWeekRange } from "@/lib/time";
 import { generateLectureRoster, type GeneratorInput, type GenSeat } from "./generate";
+import { g2RuleFor } from "./newcomer";
 import { getRosterSlots } from "./queries";
 
 // Every roster change goes through here, so the admin pages and the weekly
@@ -59,16 +60,21 @@ export async function seatsFor(mode: Mode): Promise<GenSeat[]> {
 export async function loadGeneratorInput(weekStart: string): Promise<GeneratorInput> {
   const defaultMaxG2 = await getDefaultMaxG2();
   const team = await db
-    .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek })
+    .select({ id: members.id, nickname: members.nickname, pool: members.pool, maxG2PerWeek: members.maxG2PerWeek, startedOn: members.startedOn })
     .from(members)
     .where(and(eq(members.active, true), isNotNull(members.pool)));
   const ids = team.map((m) => m.id);
+  const rules = new Map(team.map((m) => [m.id, g2RuleFor(m, weekStart, defaultMaxG2)]));
+  // A newcomer's G2 lock would contradict their G7-only weeks.
+  const newcomers = new Set(team.filter((m) => rules.get(m.id)!.g7OnlyUntil).map((m) => m.id));
 
   return {
     dates: weekDates(weekStart),
-    members: team.map((m) => ({ id: m.id, nickname: m.nickname, pool: m.pool!, maxG2: m.maxG2PerWeek ?? defaultMaxG2 })),
+    members: team.map((m) => ({ id: m.id, nickname: m.nickname, pool: m.pool!, maxG2: rules.get(m.id)!.maxG2 ?? defaultMaxG2 })),
     patterns: ids.length ? await db.select().from(memberPatterns).where(inArray(memberPatterns.memberId, ids)) : [],
-    locks: ids.length ? await db.select().from(memberG2Locks).where(inArray(memberG2Locks.memberId, ids)) : [],
+    locks: ids.length
+      ? (await db.select().from(memberG2Locks).where(inArray(memberG2Locks.memberId, ids))).filter((lock) => !newcomers.has(lock.memberId))
+      : [],
     seats: await seatsFor("lecture"),
   };
 }

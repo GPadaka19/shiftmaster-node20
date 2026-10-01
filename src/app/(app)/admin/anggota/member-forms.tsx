@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFormAction } from "@/hooks/use-form-action";
 import type { FormState } from "@/lib/forms";
+import { NEWCOMER_WEEKS } from "@/lib/roster/newcomer";
 import { setMemberActive } from "./actions";
 
 export type MemberDefaults = {
@@ -15,13 +16,14 @@ export type MemberDefaults = {
   role: "staff" | "admin" | "superadmin";
   pool: "lab" | "studio" | "pkl" | "none";
   dutyLabel: string;
+  startedOn: string;
 };
 
-const EMPTY: MemberDefaults = { nickname: "", fullName: "", email: "", role: "staff", pool: "lab", dutyLabel: "" };
+export const EMPTY_MEMBER: MemberDefaults = { nickname: "", fullName: "", email: "", role: "staff", pool: "lab", dutyLabel: "", startedOn: "" };
 
 export function MemberForm({
   action,
-  defaults = EMPTY,
+  defaults = EMPTY_MEMBER,
   submitLabel,
 }: {
   action: (state: FormState, formData: FormData) => Promise<FormState>;
@@ -83,6 +85,16 @@ export function MemberForm({
         <Field label="Jabatan (opsional)" htmlFor="dutyLabel" error={errors.dutyLabel} hint='Misalnya "Admin Gedung 2".'>
           <Input id="dutyLabel" name="dutyLabel" defaultValue={defaults.dutyLabel} className="h-11" />
         </Field>
+        {pool === "lab" && (
+          <Field
+            label="Mulai bertugas"
+            htmlFor="startedOn"
+            error={errors.startedOn}
+            hint={`Staf Lab baru hanya ditempatkan di Gedung 7 selama ${NEWCOMER_WEEKS} minggu roster pertama. Kosongkan untuk staf lama.`}
+          >
+            <Input id="startedOn" name="startedOn" type="date" defaultValue={defaults.startedOn} className="h-11" {...invalid("startedOn")} />
+          </Field>
+        )}
       </div>
 
       <FormMessage error={state.error} success={state.success} />

@@ -52,7 +52,7 @@ Referensi sistem lama (read-only, jangan diubah):
 | Auth | Sesi buatan sendiri (desainnya diambil dari Go): token acak, disimpan sebagai hash SHA-256, cookie HttpOnly, berlaku 30 hari. PIN 6–8 angka, bcrypt. PIN awal `123456` (atau PIN dari admin) wajib diganti saat login pertama (`/ganti-pin`). Admin: verifikasi Google ID token (`google-auth-library`). |
 | Google Sheets | `google-auth-library` (OAuth2 + refresh token) + REST `values:batchGet` |
 | Test | Vitest untuk logika murni (parser, generator, validasi, mode). Playwright untuk smoke test belakangan. |
-| Deploy | Docker (`output: "standalone"`) + container Postgres, pipeline VPS/Traefik, branch `prod` |
+| Deploy | Coolify: build `Dockerfile` (`output: "standalone"`) dari branch `production`, Postgres 17 sebagai resource Coolify |
 
 ### Catatan Next.js 16 (baca `node_modules/next/dist/docs/` sebelum menulis kode)
 
@@ -428,15 +428,15 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - Mengedit roster yang sudah terbit langsung berlaku (tercatat di audit log).
 
 **Fase 3 — Pindah** (persiapan teknis ✅ 1 Okt 2026; sisanya langkah operasional di `docs/GO-LIVE.md`)
-- ✅ Bootstrap produksi: migrasi + konfigurasi awal + superadmin pertama saat container start.
-- ✅ `docker-compose.yml` produksi (app, Postgres, halaman maintenance) yang bisa jalan berdampingan
-  dengan app lama; header keamanan dasar; skrip backup harian.
-- ✅ GitHub Actions: CI di `development`, deploy saat merge ke `production`, cron roster Jumat 17:30 WIB.
-- Rotasi credentials Google Sheets + OAuth client Web untuk login admin (`docs/google-sheets-credentials.md`).
-- Isi GitHub Secrets dan deploy pertama ke domain uji (mis. `shiftmaster-v2.gpadaka.com`).
-- Isi anggota, PIN, pola mingguan, periode, dan libur.
-- Jalan paralel dengan sistem lama selama 1–2 minggu, cocokkan hasilnya.
-- Pindah domain, arsipkan `shiftmaster` dan `jadwal-lab-upt`.
+- ✅ Bootstrap produksi: migrasi + konfigurasi awal + superadmin pertama + tim awal saat container start.
+- ✅ Deploy lewat Coolify (Dockerfile + resource Postgres + backup Coolify); header keamanan dasar.
+  Pipeline VPS lama (`docker-compose.yml`, `deploy.yml`, halaman maintenance, skrip backup) dihapus.
+- ✅ GitHub Actions: CI (termasuk build image Docker) di `development`, cron roster Jumat 17:30 WIB.
+- ✅ Rotasi credentials Google Sheets + OAuth client Web untuk login admin (`docs/google-sheets-credentials.md`).
+- Siapkan Postgres + aplikasi di Coolify, deploy pertama ke `sm.gpadaka.com` (tanpa masa paralel:
+  sistem lama sudah tidak dipakai).
+- Lengkapi anggota, pola mingguan, periode, dan libur.
+- Hapus OAuth client lama, arsipkan `shiftmaster` dan `jadwal-lab-upt`.
 
 **Fitur tambahan: Tukar shift** ✅ selesai 1 Okt 2026
 - Tabel `swap_requests` (migrasi `0001_swap_requests`), aturan di `lib/swap/rules.ts` (dengan test),

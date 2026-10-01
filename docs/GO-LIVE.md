@@ -1,132 +1,107 @@
-# Go-live ShiftMaster v2 (Fase 3)
+# Go-live ShiftMaster v2 (Coolify)
 
-Urutan memindahkan ShiftMaster dari sistem lama (`shiftmaster` + `jadwal-lab-upt`) ke
-aplikasi ini. Langkah 1–4 sekali saja; langkah 5–6 adalah masa uji paralel.
+ShiftMaster v2 langsung memakai domain **`sm.gpadaka.com`**. Sistem lama (`shiftmaster` + `jadwal-lab-upt`)
+sudah tidak dipakai, jadi tidak ada masa uji paralel atau pindah domain.
 
 ## Cara deploy bekerja
 
-- `development`: CI (lint, typecheck, test, build) di setiap push.
-- `production`: setiap merge/push men-deploy ke VPS (`.github/workflows/deploy.yml`):
-  1. Verifikasi + build image Docker.
-  2. `.env` dibuat dari GitHub Secrets.
-  3. File disalin ke `~/code/shiftmaster-v2` di VPS.
-  4. `docker compose up -d --build`.
-  5. Menunggu healthcheck.
-- Saat start, container menjalankan migrasi database, mengisi konfigurasi awal (area, ruangan,
-  shift, kursi), dan membuat superadmin pertama dari `BOOTSTRAP_SUPERADMIN_EMAIL`.
-- Stack di VPS (`docker-compose.yml`):
-  - `shiftmaster-app`: aplikasi;
-  - `shiftmaster-db`: Postgres 17 dengan volume `shiftmaster-pgdata`;
-  - `shiftmaster-maintenance`: halaman "sedang diperbarui" selama app restart.
-- Roster minggu depan dibuat otomatis tiap Jumat 17:30 WIB oleh
-  `.github/workflows/weekly-roster.yml`. Tidak perlu crontab di VPS.
+- `development`: CI di setiap push (lint, typecheck, test, build Next.js, dan build image Docker).
+- `production`: Coolify menarik repo lewat GitHub App, build `Dockerfile`, lalu mengganti container lama
+  setelah container baru sehat (`/api/health`). Kalau build gagal, versi lama tetap jalan.
+- Saat start, container menjalankan migrasi database, mengisi konfigurasi awal (area, ruangan, shift,
+  kursi), membuat superadmin dari `BOOTSTRAP_SUPERADMIN_EMAIL`, dan mengisi tim awal dari
+  `src/lib/db/seed-data.ts` (sekali saja per database).
+- Roster minggu depan dibuat otomatis tiap Jumat 17:30 WIB oleh `.github/workflows/weekly-roster.yml`.
 
 ## 1. Kredensial Google
 
 Ikuti [google-sheets-credentials.md](google-sheets-credentials.md):
 
-- **Bagian A:** rotasi client + refresh token Sheets. Catat client ID, client secret, refresh token.
-- **Bagian B:** buat OAuth client **Web** untuk login admin. Isi Authorized JavaScript origins
-  dengan domain uji (langkah 2), nanti juga domain akhir.
+- **Bagian A:** client + refresh token Sheets (sudah dibuat, file ada di `~/secrets/`).
+- **Bagian B:** OAuth client **Web** untuk login admin, dengan origin `https://sm.gpadaka.com`.
 
-## 2. Domain uji paralel
+## 2. DNS
 
-Selama uji paralel, app lama tetap di `shiftmaster.gpadaka.com`. App baru butuh host lain,
-misalnya `shiftmaster-v2.gpadaka.com`.
+Di Cloudflare, buat record `sm` ke IP server Coolify, dengan pengaturan yang sama seperti app lain di
+`gpadaka.com` yang sudah jalan di Coolify (proxied, SSL/TLS **Full (strict)**).
 
-- Buat record DNS-nya di Cloudflare, mengarah ke VPS yang sama.
-- Pakai subdomain **satu tingkat** (`shiftmaster-v2.gpadaka.com`, bukan
-  `v2.shiftmaster.gpadaka.com`). Sertifikat Cloudflare gratis hanya mencakup satu tingkat.
+## 3. Postgres di Coolify
 
-## 3. GitHub Secrets
+1. Project (misalnya **ShiftMaster**) → **+ New** → **Database** → **PostgreSQL**, image `postgres:17-alpine`.
+2. Nama: `shiftmaster-db`. Biarkan Coolify membuat user dan password.
+3. **Jangan** aktifkan *Make it publicly available*. App mengaksesnya lewat jaringan internal Coolify.
+4. **Start**. Salin **Postgres URL (internal)** untuk `DATABASE_URL` di langkah 4.
+5. **Backups** → aktifkan backup terjadwal, misalnya `0 2 * * *` (setiap 02:00), simpan 14 cadangan.
+   Kalau punya S3/R2, tambahkan sebagai tujuan supaya cadangan tidak hanya di server yang sama.
 
-Isi di repo `GPadaka19/shiftmaster-fe` → Settings → Secrets and variables → Actions, atau lewat CLI:
+## 4. Aplikasi di Coolify
 
-```bash
-gh secret set APP_HOST -R GPadaka19/shiftmaster-fe
-```
+1. Project yang sama → **+ New** → **Private Repository (with GitHub App)** → pilih `GPadaka19/shiftmaster-fe`.
+2. **Branch:** `production`. **Build Pack:** `Dockerfile`. **Ports Exposes:** `3000`.
+3. **Domains:** `https://sm.gpadaka.com`.
+4. **Health Check:** aktifkan, path `/api/health`, port `3000`.
+5. **Environment Variables** (centang *Is Literal* untuk nilai yang berisi `$`):
 
-| Secret | Isi |
+| Variabel | Isi |
 |---|---|
-| `VPS_HOST`, `VPS_USER`, `SSH_PRIVATE_KEY` | Sama dengan repo lama |
-| `APP_HOST` | Domain app, mis. `shiftmaster-v2.gpadaka.com` |
-| `TRAEFIK_NETWORK` | Opsional; default `jadwal-lab-upt-net` (network Traefik yang sama dengan app lama) |
-| `POSTGRES_PASSWORD` | String acak panjang (`openssl rand -base64 32`). **Jangan diganti setelah deploy pertama**: Postgres hanya memakainya saat volume pertama kali dibuat |
+| `DATABASE_URL` | Postgres URL (internal) dari langkah 3 |
 | `GOOGLE_CLIENT_ID` | Client ID OAuth **Web** (bagian B) |
-| `BOOTSTRAP_SUPERADMIN_EMAIL` | Email Google kamu (superadmin pertama) |
-| `BOOTSTRAP_SUPERADMIN_NICKNAME` | Opsional; nickname kamu |
-| `SOURCE_SPREADSHEET_ID`, `SOURCE_READ_RANGE` | Sama dengan backend Go (`JADWAL!A1:Z200`) |
-| `M_SOURCE_SPREADSHEET_ID`, `M_SOURCE_READ_RANGE` | Sama dengan backend Go (`AgendaLab!A1:Z200`) |
+| `BOOTSTRAP_SUPERADMIN_EMAIL` | `gustipadaka19@gmail.com` |
+| `BOOTSTRAP_SUPERADMIN_NICKNAME` | `Daka` |
+| `SOURCE_SPREADSHEET_ID`, `SOURCE_READ_RANGE` | Sama dengan `.env.local` (`JADWAL!A1:Z200`) |
+| `M_SOURCE_SPREADSHEET_ID`, `M_SOURCE_READ_RANGE` | Sama dengan `.env.local` (`AgendaLab!A1:Z200`) |
 | `GOOGLE_SHEETS_CLIENT_ID`, `GOOGLE_SHEETS_CLIENT_SECRET`, `GOOGLE_SHEETS_REFRESH_TOKEN` | Dari bagian A |
 | `CRON_SECRET` | String acak panjang (`openssl rand -base64 32`) |
 
-Workflow deploy berhenti dengan pesan jelas kalau ada secret wajib yang kosong.
+   `NODE_ENV`, `PORT`, `HOSTNAME`, dan `RUN_MIGRATIONS=true` sudah diatur di `Dockerfile`.
 
-## 4. Deploy pertama
+6. **Deploy**. Pantau log build sampai container sehat, lalu buka `https://sm.gpadaka.com/api/health`.
+   Hasilnya harus `{"status":"ok"}`.
+7. Pastikan **Auto Deploy** aktif, supaya setiap merge ke `production` langsung di-deploy.
 
-1. Buat PR `development` → `production`, lalu merge.
-2. Pantau tab **Actions** → workflow **Deploy** sampai hijau.
-3. Buka `https://<APP_HOST>/api/health`. Hasilnya harus `{"status":"ok"}`.
-4. Masuk lewat tab **Admin** dengan akun Google dari `BOOTSTRAP_SUPERADMIN_EMAIL`.
+## 5. GitHub Secrets untuk cron roster
 
-Kalau gagal, log aplikasi ada di VPS: `sudo docker logs --tail 100 shiftmaster-app`.
+Di `GPadaka19/shiftmaster-fe` → Settings → Secrets and variables → Actions:
 
-## 5. Isi data (sekali, oleh superadmin/admin)
+| Secret | Isi |
+|---|---|
+| `APP_HOST` | `sm.gpadaka.com` |
+| `CRON_SECRET` | Nilai yang **sama** dengan di Coolify |
 
-Urutannya penting, karena setiap langkah dipakai langkah berikutnya.
+Lalu jalankan **Actions → Weekly roster → Run workflow** sekali untuk memastikan cron bisa memanggil app.
 
-1. **Anggota:**
-   - Tambah admin (peran Admin + email Google).
-   - Tambah semua staf: pool Lab, Studio, atau PKL.
-   - Staf (yang di-seed maupun yang ditambahkan) mulai dengan PIN awal `123456` dan **wajib membuat PIN sendiri**
-     saat login pertama. Beri tahu staf secara langsung; jangan tulis PIN awal di grup publik.
-   - Staf yang lupa PIN: buka detailnya di Anggota → **Reset ke PIN awal**.
-2. **Kalender:**
+## 6. Isi data (sekali, oleh superadmin/admin)
+
+Tim awal (admin dan staf) sudah dibuat otomatis. Urutannya penting, karena setiap langkah dipakai langkah berikutnya.
+
+1. **Masuk** lewat tab **Admin** dengan akun Google superadmin.
+2. **Anggota:**
+   - Periksa daftar, lengkapi nama lengkap, dan isi **Mulai bertugas** untuk staf Lab yang baru masuk
+     (G7 saja selama 4 minggu roster pertama).
+   - Staf mulai dengan PIN awal `123456` dan wajib membuat PIN sendiri saat login pertama.
+     Beri tahu staf secara langsung; jangan tulis PIN awal di grup publik.
+   - Staf yang lupa PIN: buka detailnya → **Reset ke PIN awal**.
+3. **Kalender:**
    - Isi periode semester berjalan (Masa Kuliah) dan libur semester berikutnya.
    - Isi hari libur nasional dan kampus.
-3. **Aturan:**
-   - Isi pola Pagi/Siang tiap anggota (gedung untuk PKL), batas G2, dan kunci G2.
+4. **Aturan:**
+   - Isi pola Pagi/Siang tiap anggota, batas G2, dan kunci G2.
    - Pastikan tabel cakupan Lab menunjukkan 6/6 untuk setiap hari dan shift.
-4. **Editor Roster:**
+5. **Editor Roster:**
    - Generate draf minggu ini, periksa banner pelanggaran dan Distribusi, lalu terbitkan.
-   - Ulangi untuk minggu depan, atau biarkan cron yang membuatnya Jumat sore.
+   - Minggu depan dibuat cron Jumat sore, atau generate manual.
 
-## 6. Uji paralel (1–2 minggu)
+## 7. Bersih-bersih
 
-- Minta staf login dengan nickname + PIN dan memakai Hari Ini, Roster, dan Jadwal Lab.
-- Setiap hari, bandingkan roster dan jadwal lab di app baru dengan app lama.
-- Coba **Actions → Weekly roster → Run workflow** sekali untuk memastikan cron jalan.
-- Pasang backup harian di VPS. Jalankan `crontab -e`, lalu tambahkan baris ini:
-
-```
-0 2 * * * $HOME/code/shiftmaster-v2/scripts/backup-db.sh >> $HOME/backups/shiftmaster/backup.log 2>&1
-```
-
-## 7. Pindah domain
-
-1. Matikan app lama yang memakai `shiftmaster.gpadaka.com`:
-
-   ```bash
-   cd ~/code/shiftmaster && sudo docker compose down
-   ```
-
-2. Ubah secret `APP_HOST` menjadi `shiftmaster.gpadaka.com`, dan tambahkan origin itu di OAuth client Web.
-3. Jalankan **Actions → Deploy → Run workflow**.
-4. Setelah yakin, matikan juga backend Go:
-
-   ```bash
-   cd ~/jadwal-lab-upt && sudo docker compose down
-   ```
-
-5. Hapus record DNS domain uji.
-
-**Kembali ke app lama** (kalau ada masalah): jalankan `sudo docker compose up -d` di folder app lama,
-lalu kembalikan `APP_HOST` ke domain uji dan deploy ulang.
-
-## 8. Bersih-bersih
-
-- Hapus OAuth client Sheets yang lama di Google Cloud Console (bagian A langkah 6). Kredensial
-  lama pernah ter-commit di riwayat git `jadwal-lab-upt`.
+- Hapus OAuth client Sheets lama di project Google Cloud `ss-upt-480203` (ID diawali `99758034438-`).
+  Kredensial itu masih aktif dan pernah ter-commit di riwayat git `jadwal-lab-upt`.
+- Hapus resource app lama di Coolify kalau masih ada, dan record DNS `shiftmaster` kalau tidak dipakai lagi.
 - Arsipkan repo `shiftmaster` dan `jadwal-lab-upt` di GitHub (Settings → Archive).
-- Hapus `jadwal-lab-upt/secrets/`, `shiftmaster/jadwal-lab-upt/` (salinan lama), dan
-  `.env.local` lama dari laptop.
+- Hapus `jadwal-lab-upt/secrets/` dan `~/secrets/env.local.before-rotation` dari laptop.
+
+## Kalau ada masalah
+
+- **Log aplikasi:** Coolify → aplikasi → **Logs**.
+- **Rollback:** Coolify → aplikasi → **Deployments** → pilih deployment sebelumnya → **Redeploy**.
+  Migrasi database tidak ikut mundur. Semua migrasi sejauh ini hanya menambah kolom/tabel, jadi versi lama tetap jalan.
+- **Restore database:** Coolify → `shiftmaster-db` → **Backups** → pilih cadangan → **Restore**.

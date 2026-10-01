@@ -1,9 +1,11 @@
 name: Weekly roster
 
-# Every Friday 17:30 WIB (10:30 UTC): ask the app to create and publish next
-# week's roster if none exists yet. Scheduled runs only start from the default
-# branch (production). A failed run (e.g. no weekly patterns set) fails this
-# job, so GitHub emails the repo owner.
+# Every Friday 17:30 WIB (10:30 UTC): ask the app (deployed by Coolify) to
+# create and publish next week's roster if none exists yet. Scheduled runs only
+# start from the default branch (production). A failed run (e.g. no weekly
+# patterns set) fails this job, so GitHub emails the repo owner.
+# Needs repo secrets APP_HOST (e.g. sm.gpadaka.com) and CRON_SECRET (same value
+# as in Coolify).
 
 on:
   schedule:

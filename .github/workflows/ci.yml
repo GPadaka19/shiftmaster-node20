@@ -29,3 +29,12 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  # Coolify builds this Dockerfile on every push to production; catch a broken
+  # image here, before the merge.
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build --pull -t shiftmaster:ci .

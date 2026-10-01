@@ -47,21 +47,19 @@ Server development dijalankan EnvKit (site `shiftmaster`, proses "Next.js dev") 
 
 ## Deploy
 
-Merge ke branch `production` men-deploy ke VPS lewat GitHub Actions (`.github/workflows/deploy.yml`).
-Stack di VPS ada di `docker-compose.yml`:
+Produksi jalan di **Coolify** (`https://sm.gpadaka.com`):
 
-- **App:** image `output: "standalone"`. Saat start, app menjalankan migrasi, mengisi konfigurasi
-  awal, dan membuat superadmin pertama.
-- **Postgres 17.**
-- **Halaman maintenance** saat app restart.
+- **App:** Coolify build `Dockerfile` (`output: "standalone"`) setiap ada push ke branch `production`.
+  Saat start, app menjalankan migrasi, mengisi konfigurasi awal, superadmin pertama, dan tim awal.
+- **Postgres 17:** resource database di Coolify, dengan backup terjadwal dari Coolify.
+- Environment variables diatur di Coolify, bukan di repo.
 
-Workflow lain:
+Workflow GitHub Actions:
 
-- `ci.yml`: lint, typecheck, test, dan build di `development`.
-- `weekly-roster.yml`: membuat roster minggu depan tiap Jumat 17:30 WIB.
+- `ci.yml`: lint, typecheck, test, build Next.js, dan build image Docker di `development` dan PR.
+- `weekly-roster.yml`: membuat roster minggu depan tiap Jumat 17:30 WIB (butuh secret `APP_HOST` dan `CRON_SECRET`).
 
-Langkah go-live, daftar GitHub Secrets, backup, dan pindah domain ada di
-[docs/GO-LIVE.md](docs/GO-LIVE.md).
+Langkah go-live, pengaturan Coolify, backup, dan rollback ada di [docs/GO-LIVE.md](docs/GO-LIVE.md).
 
 ## Catatan untuk yang melanjutkan
 

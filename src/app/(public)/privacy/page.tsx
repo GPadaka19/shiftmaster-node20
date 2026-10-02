@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProseLink, ProseList, ProseSection } from "@/components/prose";
+import { ACTIVITY_RETENTION_DAYS } from "@/lib/activity/constants";
 import { PIN_LOCK_MINUTES, PIN_MAX_ATTEMPTS, SESSION_TTL_DAYS } from "@/lib/auth/constants";
 
 export const metadata: Metadata = {
@@ -60,10 +61,14 @@ export default function PrivacyPage() {
               <strong>Data sesi</strong>: hash dari token sesi, waktu masuk, dan
               waktu sesi berakhir, serta jumlah percobaan PIN yang salah.
             </li>
+            <li>
+              <strong>Data pemakaian</strong>: kapan kamu masuk, halaman yang kamu buka, dan nama tombol yang kamu
+              tekan. Teks yang kamu ketik, termasuk PIN dan alasan tukar shift, tidak ikut dicatat.
+            </li>
           </ProseList>
           <p>
-            Shift Master tidak menyimpan alamat IP, lokasi, atau data perangkat di databasenya, dan tidak memakai alat
-            analitik atau pelacak iklan.
+            Shift Master tidak menyimpan alamat IP, lokasi, atau data perangkat di databasenya. Data pemakaian dicatat
+            oleh Shift Master sendiri; tidak ada layanan analitik pihak ketiga atau pelacak iklan.
           </p>
         </ProseSection>
 
@@ -120,6 +125,7 @@ export default function PrivacyPage() {
             <li>Menyusun, menerbitkan, dan menampilkan roster serta jadwal dan agenda lab.</li>
             <li>Memproses permintaan tukar shift antara dua staf dan persetujuan admin.</li>
             <li>Mencatat perubahan supaya kesalahan pada roster bisa ditelusuri.</li>
+            <li>Melihat seberapa sering Shift Master dipakai dan oleh siapa, lewat data pemakaian.</li>
           </ProseList>
           <p>Data tidak dipakai untuk tujuan lain, tidak dijual, dan tidak dipakai untuk iklan.</p>
         </ProseSection>
@@ -128,6 +134,7 @@ export default function PrivacyPage() {
           <ProseList>
             <li>Nickname dan jadwal shift terlihat oleh sesama pengguna Shift Master yang sudah masuk.</li>
             <li>Permintaan tukar shift dan alasannya terlihat oleh kedua staf yang terlibat dan oleh admin.</li>
+            <li>Data pemakaian terlihat oleh admin, sebagai jumlah per anggota dan per tombol.</li>
             <li>
               Jadwal dan agenda lab, termasuk nama dosen dan nama peminjam, terlihat oleh semua pengguna Shift Master
               yang sudah masuk.
@@ -148,9 +155,10 @@ export default function PrivacyPage() {
         <ProseSection title="5. Cookie dan penyimpanan di perangkat">
           <p>
             Setelah kamu masuk, Shift Master memasang satu cookie sesi supaya kamu tetap masuk selama {SESSION_TTL_DAYS}{" "}
-            hari atau sampai kamu keluar. Pilihan tema terang atau gelap disimpan di perangkatmu saja. Tombol masuk
-            Google dimuat dari Google dan bisa memasang cookie milik Google sendiri. Tidak ada cookie iklan atau
-            pelacak.
+            hari atau sampai kamu keluar. Pilihan tema terang atau gelap disimpan di perangkatmu saja. Kalau
+            kamu menutup kartu ajakan memasang aplikasi, hal itu juga dicatat di perangkatmu saja, dan browser menyimpan
+            satu halaman pemberitahuan untuk saat tidak ada koneksi. Tombol masuk Google dimuat dari Google dan bisa
+            memasang cookie milik Google sendiri. Tidak ada cookie iklan atau pelacak.
           </p>
         </ProseSection>
 
@@ -174,6 +182,7 @@ export default function PrivacyPage() {
               akunmu berubah. Sesi yang sudah berakhir dihapus dari database.
             </li>
             <li>Riwayat roster, tukar shift, dan catatan perubahan disimpan sebagai arsip kerja UPT Laboratorium.</li>
+            <li>Data pemakaian dihapus setelah {ACTIVITY_RETENTION_DAYS} hari.</li>
             <li>Salinan data Google Sheets diganti setiap kali data diperbarui.</li>
             <li>
               Database dicadangkan sekali sehari di server yang sama, dan 14 cadangan terakhir disimpan. Data yang sudah
@@ -242,10 +251,14 @@ export default function PrivacyPage() {
               <strong>Session data</strong>: a hash of the session token, the
               sign-in time and the session expiry time, and the number of wrong PIN attempts.
             </li>
+            <li>
+              <strong>Usage data</strong>: when you sign in, which pages you open, and the names of the buttons you
+              press. Text you type, including your PIN and shift swap reasons, is not recorded.
+            </li>
           </ProseList>
           <p>
-            Shift Master does not store IP addresses, location or device data in its database, and it does not use
-            analytics or advertising trackers.
+            Shift Master does not store IP addresses, location or device data in its database. Usage data is recorded
+            by Shift Master itself; there is no third-party analytics service and no advertising tracker.
           </p>
         </ProseSection>
 
@@ -301,6 +314,7 @@ export default function PrivacyPage() {
             <li>To build, publish and show the roster, the lab timetable and lab bookings.</li>
             <li>To process shift swap requests between two staff members and the admin&apos;s approval.</li>
             <li>To record changes so that mistakes in the roster can be traced.</li>
+            <li>To see how often Shift Master is used and by whom, from the usage data.</li>
           </ProseList>
           <p>Data is not used for any other purpose, is not sold, and is not used for advertising.</p>
         </ProseSection>
@@ -309,6 +323,7 @@ export default function PrivacyPage() {
           <ProseList>
             <li>Nicknames and shifts are visible to other signed-in Shift Master users.</li>
             <li>A shift swap request and its reason are visible to the two staff members involved and to admins.</li>
+            <li>Usage data is visible to admins, as counts per member and per button.</li>
             <li>
               The lab timetable and lab bookings, including lecturer and borrower names, are visible to all signed-in
               Shift Master users.
@@ -329,8 +344,10 @@ export default function PrivacyPage() {
         <ProseSection level={3} title="5. Cookies and device storage">
           <p>
             After you sign in, Shift Master sets one session cookie that keeps you signed in for {SESSION_TTL_DAYS} days
-            or until you sign out. Your light or dark theme choice is stored on your device only. The Sign in with
-            Google button is loaded from Google and may set Google&apos;s own cookies. There are no advertising or
+            or until you sign out. Your light or dark theme choice is stored on your device only. If you
+            close the card that invites you to install the app, that is also remembered on your device only, and the
+            browser keeps one notice page for when there is no connection. The Sign in with Google button is loaded
+            from Google and may set Google&apos;s own cookies. There are no advertising or
             tracking cookies.
           </p>
         </ProseSection>
@@ -355,6 +372,7 @@ export default function PrivacyPage() {
               changes. Ended sessions are deleted from the database.
             </li>
             <li>Roster history, shift swaps and the change log are kept as working records of UPT Laboratorium.</li>
+            <li>Usage data is deleted after {ACTIVITY_RETENTION_DAYS} days.</li>
             <li>The copy of the Google Sheets data is replaced every time the data is refreshed.</li>
             <li>
               The database is backed up once a day on the same server, and the 14 most recent backups are kept. Deleted

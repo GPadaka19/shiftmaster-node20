@@ -102,7 +102,7 @@ Next.js — 1 container
    ├─ proxy.ts            cek cookie sesi: tanpa sesi, "/" menampilkan halaman publik, lainnya ke /login
    ├─ Halaman (Server Components)   baca DB + cache Sheets langsung di server
    ├─ Server Actions      ubah roster/anggota/aturan → cek role → audit log
-   ├─ Route Handlers      /api/health, /api/cron/weekly-roster
+   ├─ Route Handlers      /api/health, /api/cron/weekly-roster, /api/activity (data pemakaian)
    ├─ lib/sheets ──OAuth──► Google Sheets (cache 15 menit + snapshot di DB)
    └─ lib/db ──────────────► Postgres — container kedua
 GitHub Actions (Jumat) ──► /api/cron/weekly-roster (dijaga CRON_SECRET)
@@ -145,6 +145,8 @@ src/
     api/health/route.ts
     api/cron/weekly-roster/route.ts
     manifest.ts, icon.png       PWA (bisa di-install); logo di public/brand, sumbernya logo.png
+                                service worker di public/sw.js (hanya halaman offline, tidak menyimpan data);
+                                aturan kartu ajakan pasang di lib/pwa/install-rules.ts
   proxy.ts                      cek cookie sesi → halaman publik di "/" atau /login
   instrumentation.ts            migrasi DB saat server start (RUN_MIGRATIONS=true)
   lib/

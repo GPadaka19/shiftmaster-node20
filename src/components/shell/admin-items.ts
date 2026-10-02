@@ -1,4 +1,4 @@
-import { Activity, CalendarCog, CheckCheck, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
+import { Activity, CalendarCog, ChartNoAxesColumn, CheckCheck, ListChecks, SquarePen, Users, type LucideIcon } from "lucide-react";
 import { hasRole, type Role } from "@/lib/auth/roles";
 
 // Not a client module, so the account page (server) and the sidebar (client) can
@@ -40,6 +40,13 @@ export const ADMIN_ITEMS: AdminItem[] = [
     label: "Status",
     description: "Sinkronisasi Google Sheets",
     icon: Activity,
+    minRole: "admin",
+  },
+  {
+    href: "/admin/activity",
+    label: "Aktivitas",
+    description: "Anggota paling aktif: masuk, halaman, dan klik",
+    icon: ChartNoAxesColumn,
     minRole: "admin",
   },
   {

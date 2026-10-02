@@ -28,6 +28,7 @@ export const roomKind = pgEnum("room_kind", ["lab", "studio", "virtual"]);
 export const rosterStatus = pgEnum("roster_status", ["draft", "published"]);
 export const rosterSource = pgEnum("roster_source", ["generated", "manual"]);
 export const sheetSource = pgEnum("sheet_source", ["timetable", "agenda"]);
+export const activityKind = pgEnum("activity_kind", ["sign_in", "page_view", "click"]);
 export const swapStatus = pgEnum("swap_status", [
   "awaiting_target",
   "awaiting_admin",
@@ -104,6 +105,28 @@ export const auditLog = pgTable(
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index().on(t.createdAt)],
+);
+
+/**
+ * What members do in the app, for the admin's Aktivitas page: sign-ins, pages
+ * opened and buttons pressed. Never typed text. Pruned after
+ * ACTIVITY_RETENTION_DAYS (lib/activity/constants.ts).
+ */
+export const activityEvents = pgTable(
+  "activity_events",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    memberId: integer()
+      .notNull()
+      .references(() => members.id, { onDelete: "cascade" }),
+    kind: activityKind().notNull(),
+    /** sign_in: "pin" | "google". page_view: the path. click: the button's label. */
+    label: text().notNull(),
+    /** The page the event happened on; null for sign-ins. */
+    path: text(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index().on(t.createdAt), index().on(t.memberId, t.createdAt)],
 );
 
 // ─── Places ──────────────────────────────────────────────────────────────────

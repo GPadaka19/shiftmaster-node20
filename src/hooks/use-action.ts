@@ -3,15 +3,14 @@ import type { FormState } from "@/lib/forms";
 
 /**
  * Runs a Server Action from a button (no form) and keeps its result for
- * <FormMessage>. An optional confirm text asks first; the previous message is
- * cleared when a new run starts.
+ * <FormMessage>. The previous message is cleared when a new run starts.
+ * Buttons that should ask first use <ConfirmButton>.
  */
 export function useAction<T extends FormState = FormState>() {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<T>({} as T);
 
-  function run(action: () => Promise<T>, confirmText?: string) {
-    if (confirmText && !window.confirm(confirmText)) return;
+  function run(action: () => Promise<T>) {
     setState({} as T);
     startTransition(async () => setState(await action()));
   }

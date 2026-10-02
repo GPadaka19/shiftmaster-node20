@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "cn";
+import { ConfirmButton } from "@/components/confirm-button";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { decideSwapRequest } from "@/app/(app)/admin/swaps/actions";
@@ -19,14 +20,17 @@ export function AnswerButtons({ requestId }: { requestId: number }) {
         <Button className="h-10 px-4" disabled={pending} onClick={() => run(() => answerSwap(requestId, true))}>
           Terima
         </Button>
-        <Button
+        <ConfirmButton
           variant="outline"
           className="h-10 px-4"
           disabled={pending}
-          onClick={() => run(() => answerSwap(requestId, false), "Tolak permintaan tukar shift ini?")}
+          title="Tolak permintaan tukar shift ini?"
+          confirmLabel="Tolak"
+          destructive
+          onConfirm={() => run(() => answerSwap(requestId, false))}
         >
           Tolak
-        </Button>
+        </ConfirmButton>
       </div>
       <FormMessage error={state.error} success={state.success} />
     </div>
@@ -37,14 +41,17 @@ export function WithdrawButton({ requestId }: { requestId: number }) {
   const { pending, state, run } = useAction();
   return (
     <div className="grid gap-2">
-      <Button
+      <ConfirmButton
         variant="outline"
         className="h-10 justify-self-start px-4"
         disabled={pending}
-        onClick={() => run(() => withdrawSwap(requestId), "Batalkan permintaan ini?")}
+        title="Batalkan permintaan ini?"
+        confirmLabel="Batalkan permintaan"
+        destructive
+        onConfirm={() => run(() => withdrawSwap(requestId))}
       >
         Batalkan permintaan
-      </Button>
+      </ConfirmButton>
       <FormMessage error={state.error} success={state.success} />
     </div>
   );
@@ -67,22 +74,28 @@ export function DecideButtons({ requestId, canApprove }: { requestId: number; ca
       </label>
       <div className="flex gap-2">
         {canApprove && (
-          <Button
+          <ConfirmButton
             className="h-10 px-4"
             disabled={pending}
-            onClick={() => run(() => decideSwapRequest(requestId, true, note), "Setujui? Kursi kedua staf langsung ditukar di roster.")}
+            title="Setujui permintaan ini?"
+            description="Kursi kedua staf langsung ditukar di roster."
+            confirmLabel="Setujui"
+            onConfirm={() => run(() => decideSwapRequest(requestId, true, note))}
           >
             Setujui
-          </Button>
+          </ConfirmButton>
         )}
-        <Button
+        <ConfirmButton
           variant="destructive"
           className="h-10 px-4"
           disabled={pending}
-          onClick={() => run(() => decideSwapRequest(requestId, false, note), "Tolak permintaan ini?")}
+          title="Tolak permintaan ini?"
+          confirmLabel="Tolak"
+          destructive
+          onConfirm={() => run(() => decideSwapRequest(requestId, false, note))}
         >
           Tolak
-        </Button>
+        </ConfirmButton>
       </div>
       <FormMessage error={state.error} success={state.success} />
     </div>

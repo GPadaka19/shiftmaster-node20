@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Field, FormMessage, NativeSelect, PinInput } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,20 +134,17 @@ export function ResetPinButton({ memberId }: { memberId: number }) {
 
   return (
     <div className="grid gap-3">
-      <Button
-        type="button"
+      <ConfirmButton
         variant="outline"
         disabled={pending}
         className="h-11 justify-self-start px-4"
-        onClick={() =>
-          run(
-            () => resetMemberPin(memberId),
-            `Kembalikan PIN anggota ini ke ${DEFAULT_PIN}? Mereka akan dikeluarkan dari semua perangkat.`,
-          )
-        }
+        title={`Kembalikan PIN anggota ini ke ${DEFAULT_PIN}?`}
+        description="Mereka akan dikeluarkan dari semua perangkat."
+        confirmLabel="Reset PIN"
+        onConfirm={() => run(() => resetMemberPin(memberId))}
       >
         {pending ? "Menyimpan…" : `Reset ke PIN awal (${DEFAULT_PIN})`}
-      </Button>
+      </ConfirmButton>
       <FormMessage error={state.error} success={state.success} />
     </div>
   );

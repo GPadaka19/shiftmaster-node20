@@ -3,6 +3,7 @@
 import { CopyCheck, X } from "lucide-react";
 import { cn } from "cn";
 import { FormMessage } from "@/components/form";
+import { ConfirmButton } from "@/components/confirm-button";
 import { useAction } from "@/hooks/use-action";
 import { POOL_SHORT_LABEL, type Pool } from "@/lib/members/labels";
 import type { Mode } from "@/lib/period/resolve";
@@ -56,16 +57,19 @@ export function RosterEditor({ weekStart, mode, dates, holidays, rows, seats, me
                       {WEEKDAY_NAMES[i + 1]}
                       {holidays[date] && <span className="block text-xs font-normal">Libur: {holidays[date]}</span>}
                     </span>
-                    <button
-                      type="button"
-                      title={`Salin ${WEEKDAY_NAMES[i + 1]} ke semua hari`}
+                    <ConfirmButton
+                      variant="ghost"
+                      size="icon-sm"
                       aria-label={`Salin ${WEEKDAY_NAMES[i + 1]} ke semua hari`}
-                      className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      className="text-muted-foreground"
                       disabled={pending}
-                      onClick={() => act(() => copyDay(weekStart, date), `Samakan semua hari minggu ini dengan ${WEEKDAY_NAMES[i + 1]}?`)}
+                      title={`Samakan semua hari minggu ini dengan ${WEEKDAY_NAMES[i + 1]}?`}
+                      description="Isi hari lain di minggu ini akan diganti."
+                      confirmLabel="Samakan"
+                      onConfirm={() => act(() => copyDay(weekStart, date))}
                     >
-                      <CopyCheck className="size-4" aria-hidden="true" />
-                    </button>
+                      <CopyCheck aria-hidden="true" />
+                    </ConfirmButton>
                   </span>
                 </th>
               ))}

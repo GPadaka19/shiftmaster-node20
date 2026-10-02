@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmButton } from "@/components/confirm-button";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/hooks/use-action";
@@ -54,55 +55,68 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
 
         {status === "draft" && (
           <>
-            <Button
+            <ConfirmButton
               className="h-10 px-4"
               disabled={pending}
-              onClick={() => act(() => publishWeek(weekStart), "Terbitkan roster ini? Staf akan langsung melihatnya.")}
+              title="Terbitkan roster ini?"
+              description="Staf akan langsung melihatnya."
+              confirmLabel="Terbitkan"
+              onConfirm={() => act(() => publishWeek(weekStart))}
             >
               Terbitkan
-            </Button>
+            </ConfirmButton>
             {mode === "lecture" && (
-              <Button
+              <ConfirmButton
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                onClick={() => act(() => generateDraft(weekStart), "Generate ulang akan mengganti seluruh isi draf ini. Lanjutkan?")}
+                title="Generate ulang draf ini?"
+                description="Seluruh isi draf ini akan diganti."
+                confirmLabel="Generate ulang"
+                onConfirm={() => act(() => generateDraft(weekStart))}
               >
                 Generate ulang
-              </Button>
+              </ConfirmButton>
             )}
             {previousWeek && (
-              <Button
+              <ConfirmButton
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                onClick={() =>
-                  act(() => copyFromWeek(weekStart, previousWeek.weekStart), `Ganti isi draf dengan salinan ${previousWeek.label}?`)
-                }
+                title={`Ganti isi draf dengan salinan ${previousWeek.label}?`}
+                description="Seluruh isi draf ini akan diganti."
+                confirmLabel="Salin"
+                onConfirm={() => act(() => copyFromWeek(weekStart, previousWeek.weekStart))}
               >
                 {copyLabel}
-              </Button>
+              </ConfirmButton>
             )}
-            <Button
+            <ConfirmButton
               variant="destructive"
               className="h-10 px-4"
               disabled={pending}
-              onClick={() => act(() => deleteDraft(weekStart), "Hapus draf roster minggu ini?")}
+              title="Hapus draf roster minggu ini?"
+              confirmLabel="Hapus"
+              destructive
+              onConfirm={() => act(() => deleteDraft(weekStart))}
             >
               Hapus draf
-            </Button>
+            </ConfirmButton>
           </>
         )}
 
         {status === "published" && (
-          <Button
+          <ConfirmButton
             variant="outline"
             className="h-10 px-4"
             disabled={pending}
-            onClick={() => act(() => unpublishWeek(weekStart), "Tarik roster ke draf? Staf tidak akan melihatnya sampai diterbitkan lagi.")}
+            title="Tarik roster ke draf?"
+            description="Staf tidak akan melihatnya sampai diterbitkan lagi."
+            confirmLabel="Tarik ke draf"
+            onConfirm={() => act(() => unpublishWeek(weekStart))}
           >
             Tarik ke draf
-          </Button>
+          </ConfirmButton>
         )}
       </div>
 

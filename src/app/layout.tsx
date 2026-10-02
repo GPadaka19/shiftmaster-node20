@@ -7,9 +7,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "ShiftMaster", template: "%s · ShiftMaster" },
+  title: { default: "Shift Master", template: "%s · Shift Master" },
   description: "Jadwal shift dan jadwal lab UPT Laboratorium.",
-  applicationName: "ShiftMaster",
+  applicationName: "Shift Master",
 };
 
 export const viewport: Viewport = {

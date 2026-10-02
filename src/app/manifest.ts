@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ShiftMaster",
-    short_name: "ShiftMaster",
+    name: "Shift Master",
+    short_name: "Shift Master",
     description: "Jadwal shift dan jadwal lab UPT Laboratorium.",
     lang: "id",
     start_url: "/",

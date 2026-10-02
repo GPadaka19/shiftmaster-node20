@@ -39,7 +39,7 @@ export default async function MembersPage({ searchParams }: PageProps<"/admin/me
     <>
       <PageHeader
         title="Anggota"
-        description="Staf, admin, dan superadmin yang bisa masuk ke ShiftMaster."
+        description="Staf, admin, dan superadmin yang bisa masuk ke Shift Master."
         actions={
           <Button asChild className="h-10 px-4">
             <Link href="/admin/members/new">

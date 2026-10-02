@@ -14,7 +14,7 @@ sudah tidak dipakai, jadi tidak ada masa uji paralel atau pindah domain.
 - Saat start, container menjalankan migrasi database, mengisi konfigurasi awal (area, ruangan, shift,
   kursi), membuat superadmin dari `BOOTSTRAP_SUPERADMIN_EMAIL`, dan mengisi tim awal dari
   `src/lib/db/seed-data.ts` (sekali saja per database).
-- Roster minggu depan dibuat otomatis tiap Jumat 17:30 WIB oleh `.github/workflows/weekly-roster.yml`.
+- Roster minggu depan dibuat otomatis tiap Jumat 17:30 WIB oleh Scheduled Task Coolify (bagian 5).
 
 ## 1. Kredensial Google
 
@@ -63,16 +63,20 @@ Di Cloudflare, buat record `sm` ke IP server Coolify, dengan pengaturan yang sam
    Hasilnya harus `{"status":"ok"}`.
 7. Setiap merge ke `production` berikutnya: klik **Redeploy** (deploy tidak otomatis, lihat di atas).
 
-## 5. GitHub Secrets untuk cron roster
+## 5. Cron roster mingguan (Scheduled Task Coolify)
 
-Di `GPadaka19/shiftmaster-node20` → Settings → Secrets and variables → Actions:
+Coolify → aplikasi → **Scheduled Tasks** → Add:
 
-| Secret | Isi |
+| Kolom | Isi |
 |---|---|
-| `APP_HOST` | `sm.gpadaka.com` |
-| `CRON_SECRET` | Nilai yang **sama** dengan di Coolify |
+| Name | `weekly-roster` |
+| Frequency | `30 10 * * 5` kalau Server Timezone di Coolify UTC, `30 17 * * 5` kalau `Asia/Jakarta` (Jumat 17:30 WIB) |
+| Command | `sh -c 'wget -qO- --header "Authorization: Bearer $CRON_SECRET" --post-data "" http://127.0.0.1:3000/api/cron/weekly-roster'` |
 
-Lalu jalankan **Actions → Weekly roster → Run workflow** sekali untuk memastikan cron bisa memanggil app.
+Perintahnya jalan di dalam container aplikasi, jadi `$CRON_SECRET` diambil dari environment variable
+aplikasi. Jangan tulis nilai secret langsung di perintah. Klik **Execute Now** sekali: balasan
+`"status":"exists"` atau `"generated"` berarti berhasil, `401` berarti secret tidak cocok, `503` berarti
+`CRON_SECRET` belum terbaca (restart aplikasi).
 
 ## 6. Isi data (sekali, oleh superadmin/admin)
 

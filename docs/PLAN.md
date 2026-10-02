@@ -105,7 +105,7 @@ Next.js — 1 container
    ├─ Route Handlers      /api/health, /api/cron/weekly-roster, /api/activity (data pemakaian)
    ├─ lib/sheets ──OAuth──► Google Sheets (cache 15 menit + snapshot di DB)
    └─ lib/db ──────────────► Postgres — container kedua
-GitHub Actions (Jumat) ──► /api/cron/weekly-roster (dijaga CRON_SECRET)
+Scheduled Task Coolify (Jumat) ──► /api/cron/weekly-roster (dijaga CRON_SECRET)
 ```
 
 Next.js punya server sendiri, jadi peran Express (perantara, penyimpan roster, cron) dan
@@ -116,7 +116,7 @@ peran Go (Sheets, login) ditangani oleh satu aplikasi TypeScript:
 - **Sheets:** hasil parse di-cache di memori selama 15 menit. Setiap fetch yang berhasil juga
   disimpan ke `sheet_snapshots`. Kalau Sheets gagal atau server restart,
   aplikasi memakai snapshot terakhir dan menampilkan "Diperbarui HH:MM".
-- **Roster mingguan otomatis:** workflow GitHub Actions terjadwal memanggil
+- **Roster mingguan otomatis:** Scheduled Task Coolify `weekly-roster` memanggil
   `POST /api/cron/weekly-roster` Jumat 17:30 WIB.
   Kalau minggu depan belum punya roster, route ini men-generate dan menerbitkannya.
   Admin tetap bisa mengedit sesudahnya.
@@ -433,7 +433,8 @@ Token (didefinisikan sekali di `globals.css` via `@theme`, komponen tidak boleh 
 - ✅ Bootstrap produksi: migrasi + konfigurasi awal + superadmin pertama + tim awal saat container start.
 - ✅ Deploy lewat Coolify (Dockerfile + resource Postgres + backup Coolify); header keamanan dasar.
   Pipeline VPS lama (`docker-compose.yml`, `deploy.yml`, halaman maintenance, skrip backup) dihapus.
-- ✅ GitHub Actions: CI (termasuk build image Docker) di `development`, cron roster Jumat 17:30 WIB.
+- ✅ GitHub Actions: CI (termasuk build image Docker) di `development`. Cron roster Jumat 17:30 WIB lewat
+  Scheduled Task Coolify.
 - ✅ Rotasi credentials Google Sheets + OAuth client Web untuk login admin (`docs/google-sheets-credentials.md`).
 - Siapkan Postgres + aplikasi di Coolify, deploy pertama ke `sm.gpadaka.com` (tanpa masa paralel:
   sistem lama sudah tidak dipakai).

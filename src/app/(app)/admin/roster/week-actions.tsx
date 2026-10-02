@@ -55,19 +55,23 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
 
         {status === "draft" && (
           <>
-            <Button
+            <ConfirmButton
               className="h-10 px-4"
               disabled={pending}
-              onClick={() => act(() => publishWeek(weekStart))}
+              title="Terbitkan roster ini?"
+              description="Staf akan langsung melihatnya."
+              confirmLabel="Terbitkan"
+              onConfirm={() => act(() => publishWeek(weekStart))}
             >
               Terbitkan
-            </Button>
+            </ConfirmButton>
             {mode === "lecture" && (
               <ConfirmButton
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                question="Isi draf ini akan diganti seluruhnya."
+                title="Generate ulang draf ini?"
+                description="Seluruh isi draf ini akan diganti."
                 confirmLabel="Generate ulang"
                 onConfirm={() => act(() => generateDraft(weekStart))}
               >
@@ -79,7 +83,8 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                question={`Isi draf ini akan diganti dengan salinan ${previousWeek.label}.`}
+                title={`Ganti isi draf dengan salinan ${previousWeek.label}?`}
+                description="Seluruh isi draf ini akan diganti."
                 confirmLabel="Salin"
                 onConfirm={() => act(() => copyFromWeek(weekStart, previousWeek.weekStart))}
               >
@@ -90,8 +95,9 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
               variant="destructive"
               className="h-10 px-4"
               disabled={pending}
-              question="Hapus draf roster minggu ini?"
+              title="Hapus draf roster minggu ini?"
               confirmLabel="Hapus"
+              destructive
               onConfirm={() => act(() => deleteDraft(weekStart))}
             >
               Hapus draf
@@ -100,14 +106,17 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
         )}
 
         {status === "published" && (
-          <Button
+          <ConfirmButton
             variant="outline"
             className="h-10 px-4"
             disabled={pending}
-            onClick={() => act(() => unpublishWeek(weekStart))}
+            title="Tarik roster ke draf?"
+            description="Staf tidak akan melihatnya sampai diterbitkan lagi."
+            confirmLabel="Tarik ke draf"
+            onConfirm={() => act(() => unpublishWeek(weekStart))}
           >
             Tarik ke draf
-          </Button>
+          </ConfirmButton>
         )}
       </div>
 

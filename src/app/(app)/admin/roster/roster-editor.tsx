@@ -60,13 +60,12 @@ export function RosterEditor({ weekStart, mode, dates, holidays, rows, seats, me
                     <ConfirmButton
                       variant="ghost"
                       size="icon-sm"
-                      compact
-                      title={`Salin ${WEEKDAY_NAMES[i + 1]} ke semua hari`}
                       aria-label={`Salin ${WEEKDAY_NAMES[i + 1]} ke semua hari`}
                       className="text-muted-foreground"
                       disabled={pending}
-                      question="Salin ke semua hari?"
-                      confirmLabel="Salin"
+                      title={`Samakan semua hari minggu ini dengan ${WEEKDAY_NAMES[i + 1]}?`}
+                      description="Isi hari lain di minggu ini akan diganti."
+                      confirmLabel="Samakan"
                       onConfirm={() => act(() => copyDay(weekStart, date))}
                     >
                       <CopyCheck aria-hidden="true" />

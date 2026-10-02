@@ -67,6 +67,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                         </Button>
                         <DeleteButton
                           label={`Hapus ${period.name}`}
+                          question={`Hapus periode "${period.name}"?`}
                           onDelete={deletePeriod.bind(null, period.id)}
                         />
                       </div>
@@ -101,6 +102,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/admin/c
                     </div>
                     <DeleteButton
                       label={`Hapus ${holiday.name}`}
+                      question={`Hapus libur "${holiday.name}"?`}
                       onDelete={deleteHoliday.bind(null, holiday.date)}
                     />
                   </li>

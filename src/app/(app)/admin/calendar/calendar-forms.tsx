@@ -80,20 +80,19 @@ export function HolidayForm() {
   );
 }
 
-/** Asks in place before deleting; the action re-renders the page. */
-export function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
+/** Asks before deleting; the action re-renders the page. */
+export function DeleteButton({ label, question, onDelete }: { label: string; question: string; onDelete: () => Promise<void> }) {
   const [pending, startTransition] = useTransition();
   return (
     <ConfirmButton
-      variant="destructive"
+      variant="ghost"
       size="icon"
-      compact
       disabled={pending}
       aria-label={label}
-      title={label}
-      className="size-10 bg-transparent text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-      question="Hapus?"
+      className="size-10 text-muted-foreground hover:text-destructive"
+      title={question}
       confirmLabel="Hapus"
+      destructive
       onConfirm={() => startTransition(onDelete)}
     >
       <Trash2 aria-hidden="true" />

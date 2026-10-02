@@ -4,7 +4,7 @@ import type { FormState } from "@/lib/forms";
 /**
  * Runs a Server Action from a button (no form) and keeps its result for
  * <FormMessage>. The previous message is cleared when a new run starts.
- * Actions that throw work away ask first with <ConfirmButton>.
+ * Buttons that should ask first use <ConfirmButton>.
  */
 export function useAction<T extends FormState = FormState>() {
   const [pending, startTransition] = useTransition();

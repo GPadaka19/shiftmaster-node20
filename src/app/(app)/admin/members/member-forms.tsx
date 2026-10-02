@@ -138,7 +138,8 @@ export function ResetPinButton({ memberId }: { memberId: number }) {
         variant="outline"
         disabled={pending}
         className="h-11 justify-self-start px-4"
-        question="Anggota ini akan keluar dari semua perangkat."
+        title={`Kembalikan PIN anggota ini ke ${DEFAULT_PIN}?`}
+        description="Mereka akan dikeluarkan dari semua perangkat."
         confirmLabel="Reset PIN"
         onConfirm={() => run(() => resetMemberPin(memberId))}
       >

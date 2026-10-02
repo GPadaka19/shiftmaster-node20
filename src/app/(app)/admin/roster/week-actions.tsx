@@ -1,5 +1,6 @@
 "use client";
 
+import { ConfirmButton } from "@/components/confirm-button";
 import { FormMessage } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { useAction } from "@/hooks/use-action";
@@ -57,40 +58,44 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
             <Button
               className="h-10 px-4"
               disabled={pending}
-              onClick={() => act(() => publishWeek(weekStart), "Terbitkan roster ini? Staf akan langsung melihatnya.")}
+              onClick={() => act(() => publishWeek(weekStart))}
             >
               Terbitkan
             </Button>
             {mode === "lecture" && (
-              <Button
+              <ConfirmButton
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                onClick={() => act(() => generateDraft(weekStart), "Generate ulang akan mengganti seluruh isi draf ini. Lanjutkan?")}
+                question="Isi draf ini akan diganti seluruhnya."
+                confirmLabel="Generate ulang"
+                onConfirm={() => act(() => generateDraft(weekStart))}
               >
                 Generate ulang
-              </Button>
+              </ConfirmButton>
             )}
             {previousWeek && (
-              <Button
+              <ConfirmButton
                 variant="outline"
                 className="h-10 px-4"
                 disabled={pending}
-                onClick={() =>
-                  act(() => copyFromWeek(weekStart, previousWeek.weekStart), `Ganti isi draf dengan salinan ${previousWeek.label}?`)
-                }
+                question={`Isi draf ini akan diganti dengan salinan ${previousWeek.label}.`}
+                confirmLabel="Salin"
+                onConfirm={() => act(() => copyFromWeek(weekStart, previousWeek.weekStart))}
               >
                 {copyLabel}
-              </Button>
+              </ConfirmButton>
             )}
-            <Button
+            <ConfirmButton
               variant="destructive"
               className="h-10 px-4"
               disabled={pending}
-              onClick={() => act(() => deleteDraft(weekStart), "Hapus draf roster minggu ini?")}
+              question="Hapus draf roster minggu ini?"
+              confirmLabel="Hapus"
+              onConfirm={() => act(() => deleteDraft(weekStart))}
             >
               Hapus draf
-            </Button>
+            </ConfirmButton>
           </>
         )}
 
@@ -99,7 +104,7 @@ export function WeekActions({ weekStart, status, mode, previousWeek }: Props) {
             variant="outline"
             className="h-10 px-4"
             disabled={pending}
-            onClick={() => act(() => unpublishWeek(weekStart), "Tarik roster ke draf? Staf tidak akan melihatnya sampai diterbitkan lagi.")}
+            onClick={() => act(() => unpublishWeek(weekStart))}
           >
             Tarik ke draf
           </Button>

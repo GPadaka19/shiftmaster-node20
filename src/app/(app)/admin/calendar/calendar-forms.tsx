@@ -3,6 +3,7 @@
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
+import { ConfirmButton } from "@/components/confirm-button";
 import { Field, FormMessage, NativeSelect } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,23 +80,23 @@ export function HolidayForm() {
   );
 }
 
-/** Asks before deleting; the action re-renders the page. */
-export function DeleteButton({ label, confirmText, onDelete }: { label: string; confirmText: string; onDelete: () => Promise<void> }) {
+/** Asks in place before deleting; the action re-renders the page. */
+export function DeleteButton({ label, onDelete }: { label: string; onDelete: () => Promise<void> }) {
   const [pending, startTransition] = useTransition();
   return (
-    <Button
-      type="button"
-      variant="ghost"
+    <ConfirmButton
+      variant="destructive"
       size="icon"
+      compact
       disabled={pending}
       aria-label={label}
       title={label}
-      className="size-10 text-muted-foreground hover:text-destructive"
-      onClick={() => {
-        if (window.confirm(confirmText)) startTransition(onDelete);
-      }}
+      className="size-10 bg-transparent text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      question="Hapus?"
+      confirmLabel="Hapus"
+      onConfirm={() => startTransition(onDelete)}
     >
       <Trash2 aria-hidden="true" />
-    </Button>
+    </ConfirmButton>
   );
 }

@@ -23,7 +23,7 @@ export function AnswerButtons({ requestId }: { requestId: number }) {
           variant="outline"
           className="h-10 px-4"
           disabled={pending}
-          onClick={() => run(() => answerSwap(requestId, false), "Tolak permintaan tukar shift ini?")}
+          onClick={() => run(() => answerSwap(requestId, false))}
         >
           Tolak
         </Button>
@@ -41,7 +41,7 @@ export function WithdrawButton({ requestId }: { requestId: number }) {
         variant="outline"
         className="h-10 justify-self-start px-4"
         disabled={pending}
-        onClick={() => run(() => withdrawSwap(requestId), "Batalkan permintaan ini?")}
+        onClick={() => run(() => withdrawSwap(requestId))}
       >
         Batalkan permintaan
       </Button>
@@ -70,7 +70,7 @@ export function DecideButtons({ requestId, canApprove }: { requestId: number; ca
           <Button
             className="h-10 px-4"
             disabled={pending}
-            onClick={() => run(() => decideSwapRequest(requestId, true, note), "Setujui? Kursi kedua staf langsung ditukar di roster.")}
+            onClick={() => run(() => decideSwapRequest(requestId, true, note))}
           >
             Setujui
           </Button>
@@ -79,7 +79,7 @@ export function DecideButtons({ requestId, canApprove }: { requestId: number; ca
           variant="destructive"
           className="h-10 px-4"
           disabled={pending}
-          onClick={() => run(() => decideSwapRequest(requestId, false, note), "Tolak permintaan ini?")}
+          onClick={() => run(() => decideSwapRequest(requestId, false, note))}
         >
           Tolak
         </Button>

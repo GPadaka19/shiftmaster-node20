@@ -9,7 +9,9 @@ import { seededRandom, shuffled } from "./random";
 //   - Studio and PKL members, and anyone whose pattern names an area, sit there.
 //   - Lab members rotate over the floor areas of their shift:
 //       * G2 seats are shared out evenly, never above a member's G2 cap
-//         (cap 0 means G7 only);
+//         (cap 0 means G7 only). When a shift has more people than G7 seats
+//         and not enough G2-eligible people under their cap, members on the
+//         default cap may go one higher (stretchMaxG2), fewest G2 first;
 //       * a member locked to G2 on a weekday sits in G2 that day;
 //       * nobody repeats a floor in the week if it can be avoided.
 //
@@ -19,7 +21,8 @@ import { seededRandom, shuffled } from "./random";
 export type GenArea = { id: number; name: string; building: "G2" | "G7"; kind: "floor" | "studio" | "building" };
 export type GenShift = { id: number; label: string };
 export type GenSeat = { area: GenArea; shift: GenShift; capacity: number };
-export type GenMember = { id: number; nickname: string; pool: Pool; maxG2: number };
+/** stretchMaxG2: the cap used only when G2 seats would otherwise leave someone without a seat; defaults to maxG2. */
+export type GenMember = { id: number; nickname: string; pool: Pool; maxG2: number; stretchMaxG2?: number };
 /** weekday: 1 = Monday … 5 = Friday. areaId null means "rotate me". */
 export type GenPattern = { memberId: number; weekday: number; shiftId: number; areaId: number | null };
 export type GenLock = { memberId: number; weekday: number };
@@ -46,7 +49,7 @@ export type GeneratorResult = {
 
 type Slot = { area: GenArea; position: number };
 
-const WEIGHT = { warning: 1000, floorRepeat: 10, imbalance: 5 } as const;
+const WEIGHT = { warning: 1000, stretch: 50, floorRepeat: 10, imbalance: 5 } as const;
 
 /** Cheapest way to give each person one slot, preferring floors they have not had this week. */
 function assignToSlots(
@@ -120,6 +123,10 @@ function runAttempt(input: GeneratorInput, random: () => number): GeneratorResul
     fairShare.set(id, cap > 0 && eligibleDays > 0 ? Math.min(cap, (totalG2 * days) / eligibleDays) : 0);
   }
 
+  const stretchCap = (id: number) => {
+    const member = members.get(id);
+    return Math.max(member?.maxG2 ?? 0, member?.stretchMaxG2 ?? member?.maxG2 ?? 0);
+  };
   const g2Count = new Map<number, number>();
   const daysSoFar = new Map<number, number>();
   const floorCount = new Map<number, Map<number, number>>();
@@ -174,18 +181,29 @@ function runAttempt(input: GeneratorInput, random: () => number): GeneratorResul
         return (g2Count.get(id) ?? 0) - expected;
       };
       const isLocked = (id: number) => locked.has(`${id}:${weekday}`);
-      const underCap = (id: number) => (g2Count.get(id) ?? 0) < (members.get(id)?.maxG2 ?? 0);
+      const g2Of = (id: number) => g2Count.get(id) ?? 0;
+      const underCap = (id: number) => g2Of(id) < (members.get(id)?.maxG2 ?? 0);
+      const underStretch = (id: number) => g2Of(id) < stretchCap(id);
 
       const lockedToday = shuffled(people.filter(isLocked), random);
       const candidates = shuffled(people.filter((id) => !isLocked(id) && underCap(id)), random).sort((a, b) => behind(a) - behind(b));
       for (const id of lockedToday) {
-        if (!underCap(id)) warnings.add(`${members.get(id)!.nickname} dikunci G2 tapi kuota G2-nya sudah habis.`);
+        if (!underStretch(id)) warnings.add(`${members.get(id)!.nickname} dikunci G2 tapi kuota G2-nya sudah habis.`);
       }
       if (lockedToday.length > slots.g2.length) {
         warnings.add(`Terlalu banyak yang dikunci G2 untuk ${shiftLabel} pada ${WEEKDAY_NAMES[weekday]}.`);
       }
 
-      const toG2 = [...lockedToday, ...candidates].slice(0, slots.g2.length);
+      // Someone would be left without a seat: stretch the default cap, fewest G2 first.
+      const needG2 = Math.min(slots.g2.length, people.length - slots.g7.length);
+      const stretched =
+        lockedToday.length + candidates.length < needG2
+          ? shuffled(people.filter((id) => !isLocked(id) && !underCap(id) && underStretch(id)), random)
+              .sort((a, b) => g2Of(a) - g2Of(b))
+              .slice(0, needG2 - lockedToday.length - candidates.length)
+          : [];
+
+      const toG2 = [...lockedToday, ...candidates, ...stretched].slice(0, slots.g2.length);
       const toG7 = people.filter((id) => !toG2.includes(id));
       const seatedG7 = toG7.slice(0, slots.g7.length);
       for (const id of toG7.slice(slots.g7.length)) {
@@ -229,11 +247,14 @@ function runAttempt(input: GeneratorInput, random: () => number): GeneratorResul
   }
   let imbalance = 0;
   for (const [id, share] of fairShare) imbalance += ((g2Count.get(id) ?? 0) - share) ** 2;
+  let stretch = 0;
+  for (const [id, count] of g2Count) stretch += Math.max(0, count - (members.get(id)?.maxG2 ?? 0));
 
   return {
     assignments,
     warnings: [...warnings],
-    score: warnings.size * WEIGHT.warning + floorPenalty * WEIGHT.floorRepeat + imbalance * WEIGHT.imbalance,
+    score:
+      warnings.size * WEIGHT.warning + stretch * WEIGHT.stretch + floorPenalty * WEIGHT.floorRepeat + imbalance * WEIGHT.imbalance,
   };
 }
 
@@ -247,5 +268,15 @@ export function generateLectureRoster(
     const attempt = runAttempt(input, random);
     if (!best || attempt.score < best.score) best = attempt;
   }
-  return best!;
+  return { ...best!, warnings: [...best!.warnings, ...stretchNotes(input, best!.assignments)] };
+}
+
+/** Tells the admin who went over their usual G2 cap, and why. Not a warning: it is allowed. */
+function stretchNotes(input: GeneratorInput, assignments: readonly GeneratedAssignment[]): string[] {
+  const g2Areas = new Set(input.seats.filter((s) => s.area.kind === "floor" && s.area.building === "G2").map((s) => s.area.id));
+  const g2 = new Map<number, number>();
+  for (const a of assignments) if (g2Areas.has(a.areaId)) g2.set(a.memberId, (g2.get(a.memberId) ?? 0) + 1);
+  return input.members
+    .filter((m) => (m.stretchMaxG2 ?? m.maxG2) > m.maxG2 && (g2.get(m.id) ?? 0) > m.maxG2)
+    .map((m) => `${m.nickname} dapat ${g2.get(m.id)} shift G2 (batas ${m.maxG2} dinaikkan karena kursi G2 kurang orang).`);
 }

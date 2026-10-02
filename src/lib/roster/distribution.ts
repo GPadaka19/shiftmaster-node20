@@ -10,12 +10,14 @@ export type DistributionRow = {
   building: number;
   total: number;
   maxG2: number | null;
+  /** Above maxG2 but within this is allowed when G2 seats were short (see G2_STRETCH). */
+  stretchMaxG2: number | null;
 };
 
 /** How many duties each member has in the week, by kind of area. Counts duties, not hours. */
 export function distribution(
   assignments: readonly { memberId: number; nickname: string; area: Pick<GenArea, "building" | "kind"> }[],
-  caps: ReadonlyMap<number, number | null>,
+  caps: ReadonlyMap<number, { maxG2: number | null; stretchMaxG2?: number | null }>,
 ): DistributionRow[] {
   const rows = new Map<number, DistributionRow>();
   for (const { memberId, nickname, area } of assignments) {
@@ -27,7 +29,8 @@ export function distribution(
       studio: 0,
       building: 0,
       total: 0,
-      maxG2: caps.get(memberId) ?? null,
+      maxG2: caps.get(memberId)?.maxG2 ?? null,
+      stretchMaxG2: caps.get(memberId)?.stretchMaxG2 ?? caps.get(memberId)?.maxG2 ?? null,
     };
     if (area.kind === "studio") row.studio++;
     else if (area.kind === "building") row.building++;

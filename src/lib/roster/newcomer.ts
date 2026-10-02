@@ -1,4 +1,5 @@
 import { addDaysIso, isoWeekday, weekStartIso } from "@/lib/time";
+import { G2_STRETCH } from "./constants";
 
 // New lab staff work only in building G7 for their first four roster weeks, so
 // they learn one building before covering G2. Studio staff are not affected.
@@ -23,12 +24,16 @@ export function g7OnlyUntil(member: Pick<RuleMember, "pool" | "startedOn">, week
 
 /**
  * The G2 rule for one member in one roster week: newcomers get a cap of 0
- * (G7 only), other lab staff their own cap or the default.
+ * (G7 only), other lab staff their own cap or the default. `stretchMaxG2` is
+ * how high the generator may go when G2 seats would otherwise go unfilled:
+ * the default plus G2_STRETCH, or exactly the member's own cap.
  */
 export function g2RuleFor(member: RuleMember, weekStart: string, defaultMaxG2: number) {
   const until = g7OnlyUntil(member, weekStart);
-  if (until) return { maxG2: 0, g7OnlyUntil: until };
-  return { maxG2: member.pool === "lab" ? (member.maxG2PerWeek ?? defaultMaxG2) : member.maxG2PerWeek, g7OnlyUntil: null };
+  if (until) return { maxG2: 0, stretchMaxG2: 0, g7OnlyUntil: until };
+  if (member.pool !== "lab") return { maxG2: member.maxG2PerWeek, stretchMaxG2: member.maxG2PerWeek, g7OnlyUntil: null };
+  if (member.maxG2PerWeek !== null) return { maxG2: member.maxG2PerWeek, stretchMaxG2: member.maxG2PerWeek, g7OnlyUntil: null };
+  return { maxG2: defaultMaxG2, stretchMaxG2: defaultMaxG2 + G2_STRETCH, g7OnlyUntil: null };
 }
 
 /** G2 locks that apply this week: a newcomer's lock would contradict their G7-only weeks. */

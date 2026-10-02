@@ -30,13 +30,22 @@ describe("g7OnlyUntil", () => {
 
 describe("g2RuleFor", () => {
   it("caps newcomers at 0 G2 shifts", () => {
-    expect(g2RuleFor(lab("2026-10-07", 3), "2026-10-12", 2)).toEqual({ maxG2: 0, g7OnlyUntil: "2026-10-30" });
+    expect(g2RuleFor(lab("2026-10-07", 3), "2026-10-12", 2)).toEqual({ maxG2: 0, stretchMaxG2: 0, g7OnlyUntil: "2026-10-30" });
   });
 
   it("uses the member's own cap or the default afterwards", () => {
-    expect(g2RuleFor(lab("2026-10-07", 3), "2026-11-02", 2)).toEqual({ maxG2: 3, g7OnlyUntil: null });
-    expect(g2RuleFor(lab(null), "2026-10-05", 2)).toEqual({ maxG2: 2, g7OnlyUntil: null });
-    expect(g2RuleFor({ pool: "studio", startedOn: null, maxG2PerWeek: null }, "2026-10-05", 2)).toEqual({ maxG2: null, g7OnlyUntil: null });
+    expect(g2RuleFor(lab("2026-10-07", 3), "2026-11-02", 2)).toEqual({ maxG2: 3, stretchMaxG2: 3, g7OnlyUntil: null });
+    expect(g2RuleFor({ pool: "studio", startedOn: null, maxG2PerWeek: null }, "2026-10-05", 2)).toEqual({
+      maxG2: null,
+      stretchMaxG2: null,
+      g7OnlyUntil: null,
+    });
+  });
+
+  it("lets only the default cap stretch by one", () => {
+    expect(g2RuleFor(lab(null), "2026-10-05", 2)).toEqual({ maxG2: 2, stretchMaxG2: 3, g7OnlyUntil: null });
+    expect(g2RuleFor(lab(null, 2), "2026-10-05", 2)).toEqual({ maxG2: 2, stretchMaxG2: 2, g7OnlyUntil: null });
+    expect(g2RuleFor(lab(null, 0), "2026-10-05", 2)).toEqual({ maxG2: 0, stretchMaxG2: 0, g7OnlyUntil: null });
   });
 });
 

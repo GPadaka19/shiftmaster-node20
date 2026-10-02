@@ -145,11 +145,48 @@ describe("generateLectureRoster", () => {
   });
 });
 
+describe("generateLectureRoster when some lab staff are G7 only", () => {
+  // Three lab members capped at 0 leave 9 people for 20 G2 seats: at the default
+  // cap of 2 that is only 18, so two seats would be left and two people unseated.
+  const ZERO = [1, 2, 3];
+  const base = input({ locks: [] });
+  const members = base.members.map((m) =>
+    m.pool !== "lab" ? m : ZERO.includes(m.id) ? { ...m, maxG2: 0, stretchMaxG2: 0 } : { ...m, maxG2: 2, stretchMaxG2: 3 },
+  );
+  const result = generateLectureRoster({ ...base, members }, { seed: 3 });
+  const g2Of = (member: number) => result.assignments.filter((a) => a.memberId === member && isG2Floor(areaOf(a.areaId))).length;
+
+  it("seats everyone by stretching the default cap to 3", () => {
+    expect(result.warnings.filter((w) => !w.includes("dinaikkan"))).toEqual([]);
+    for (const date of DATES) expect(result.assignments.filter((a) => a.date === date)).toHaveLength(18);
+    for (const id of ZERO) expect(g2Of(id)).toBe(0);
+    const others = LAB.filter((id) => !ZERO.includes(id)).map(g2Of);
+    expect(Math.max(...others)).toBe(3);
+    expect(others.reduce((a, b) => a + b, 0)).toBe(20);
+  });
+
+  it("stretches as few members as possible and says who", () => {
+    const stretched = LAB.filter((id) => g2Of(id) === 3);
+    expect(stretched).toHaveLength(2);
+    expect(result.warnings).toHaveLength(2);
+    for (const id of stretched) {
+      expect(result.warnings).toContain(`Lab${id} dapat 3 shift G2 (batas 2 dinaikkan karena kursi G2 kurang orang).`);
+    }
+  });
+
+  it("never stretches a cap set on the member", () => {
+    const fixed = members.map((m) => (m.pool === "lab" && !ZERO.includes(m.id) ? { ...m, stretchMaxG2: 2 } : m));
+    const capped = generateLectureRoster({ ...base, members: fixed }, { seed: 3, attempts: 20 });
+    expect(capped.warnings.some((w) => w.includes("tidak kebagian kursi"))).toBe(true);
+  });
+});
+
 describe("validateRoster", () => {
   const members = new Map([
     [1, { nickname: "Ani", active: true, maxG2: 1 }],
     [2, { nickname: "Budi", active: false, maxG2: 2 }],
     [3, { nickname: "Citra", active: true, maxG2: 2 }],
+    [4, { nickname: "Dodi", active: true, maxG2: 0, stretchMaxG2: 1 }],
   ]);
   const g2 = FLOORS[0];
   const g7 = FLOORS[2];
@@ -168,6 +205,7 @@ describe("validateRoster", () => {
         { date: DATES[0], areaId: g7.id, shiftId: MORNING.id, memberId: 2 },
         { date: DATES[0], areaId: g7.id, shiftId: MORNING.id, memberId: 3 },
         { date: DATES[1], areaId: g7.id, shiftId: AFTERNOON.id, memberId: 3 },
+        { date: DATES[2], areaId: g2.id, shiftId: AFTERNOON.id, memberId: 4 },
       ],
     });
     const messages = violations.map((v) => `${v.severity}: ${v.message}`);
@@ -175,7 +213,10 @@ describe("validateRoster", () => {
     expect(messages).toContain("error: G7 Lantai 3 Pagi pada Senin diisi 2 orang (kapasitas 1).");
     expect(messages).toContain("warning: Ani: 2 shift G2 minggu ini (batas 1).");
     expect(messages).toContain("warning: Citra dikunci G2 pada Selasa, tapi ditempatkan di G7 Lantai 3.");
-    expect(violations.filter((v) => v.severity === "info")).toHaveLength(5);
+    expect(messages).toContain(
+      "info: Dodi: 1 shift G2 minggu ini, di atas batas 0 (boleh sampai 1 kalau kursi G2 kurang orang).",
+    );
+    expect(violations.filter((v) => v.severity === "info")).toHaveLength(6);
   });
 
   it("skips holidays and treats the generated week as clean", () => {
@@ -202,11 +243,11 @@ describe("distribution", () => {
         { memberId: 1, nickname: "Ani", area: STUDIO },
         { memberId: 2, nickname: "Budi", area: BUILDING_G7 },
       ],
-      new Map([[1, 2]]),
+      new Map([[1, { maxG2: 2, stretchMaxG2: 3 }]]),
     );
     expect(rows).toEqual([
-      { memberId: 1, nickname: "Ani", g2: 1, g7: 1, studio: 1, building: 0, total: 3, maxG2: 2 },
-      { memberId: 2, nickname: "Budi", g2: 0, g7: 0, studio: 0, building: 1, total: 1, maxG2: null },
+      { memberId: 1, nickname: "Ani", g2: 1, g7: 1, studio: 1, building: 0, total: 3, maxG2: 2, stretchMaxG2: 3 },
+      { memberId: 2, nickname: "Budi", g2: 0, g7: 0, studio: 0, building: 1, total: 1, maxG2: null, stretchMaxG2: null },
     ]);
   });
 });

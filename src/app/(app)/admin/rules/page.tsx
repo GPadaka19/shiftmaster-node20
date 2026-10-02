@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { areas, memberG2Locks, memberPatterns, members, shifts } from "@/lib/db/schema";
 import { POOL_LABEL, type Pool } from "@/lib/members/labels";
+import { G2_STRETCH } from "@/lib/roster/constants";
 import { getDefaultMaxG2, seatsFor } from "@/lib/roster/service";
 import { WEEKDAY_NAMES } from "@/lib/time";
 import { DefaultMaxG2Form, MemberRuleForm, type DayRule } from "./rule-forms";
@@ -87,7 +88,9 @@ export default async function RulesPage() {
               <CardTitle>Kuota G2</CardTitle>
               <CardDescription>
                 Batas berapa kali seorang anggota lab ditempatkan di lantai Gedung 2 per minggu. Bisa diubah per anggota di bawah;
-                0 berarti hanya G7.
+                0 berarti hanya G7. Kalau kursi G2 kurang orang, misalnya karena beberapa anggota hanya G7, generator boleh
+                menaikkan batas ini {G2_STRETCH} untuk anggota yang memakai batas default, sesedikit mungkin. Batas yang diisi
+                per anggota tidak pernah dinaikkan.
               </CardDescription>
             </CardHeader>
             <CardContent>

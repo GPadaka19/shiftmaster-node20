@@ -15,6 +15,8 @@ export type CheckedMember = {
   nickname: string;
   active: boolean;
   maxG2: number | null;
+  /** The cap the generator may stretch to when G2 seats would go unfilled; defaults to maxG2. */
+  stretchMaxG2?: number | null;
   /** Set while a new lab member may only work in G7 (see newcomer.ts). */
   g7OnlyUntil?: string | null;
 };
@@ -86,9 +88,17 @@ export function validateRoster(input: ValidationInput): Violation[] {
         });
         continue;
       }
-      const cap = input.members.get(id)?.maxG2;
-      if (cap !== null && cap !== undefined && count > cap) {
-        violations.push({ severity: "warning", message: `${name(id)}: ${count} shift G2 minggu ini (batas ${cap}).` });
+      const member = input.members.get(id);
+      const cap = member?.maxG2;
+      if (cap === null || cap === undefined || count <= cap) continue;
+      const stretch = member?.stretchMaxG2 ?? cap;
+      if (count <= stretch) {
+        violations.push({
+          severity: "info",
+          message: `${name(id)}: ${count} shift G2 minggu ini, di atas batas ${cap} (boleh sampai ${stretch} kalau kursi G2 kurang orang).`,
+        });
+      } else {
+        violations.push({ severity: "warning", message: `${name(id)}: ${count} shift G2 minggu ini (batas ${stretch}).` });
       }
     }
 

@@ -137,7 +137,7 @@ async function EditorSection({
   });
   const spread = distribution(
     rows.map((row) => ({ memberId: row.memberId, nickname: row.nickname, area: row.area })),
-    new Map([...memberInfo].map(([id, info]) => [id, info.maxG2])),
+    new Map([...memberInfo].map(([id, info]) => [id, { maxG2: info.maxG2, stretchMaxG2: info.stretchMaxG2 }])),
   );
 
   return (
@@ -173,7 +173,7 @@ async function EditorSection({
               </thead>
               <tbody className="divide-y divide-border tabular-nums">
                 {spread.map((row) => {
-                  const overCap = mode === "lecture" && row.maxG2 !== null && row.g2 > row.maxG2;
+                  const overCap = mode === "lecture" && row.stretchMaxG2 !== null && row.g2 > row.stretchMaxG2;
                   return (
                     <tr key={row.memberId}>
                       <td className="py-2 pr-3 font-medium">{row.nickname}</td>

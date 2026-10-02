@@ -45,7 +45,13 @@ export async function loadGeneratorInput(weekStart: string): Promise<GeneratorIn
 
   return {
     dates: weekDates(weekStart),
-    members: [...team.values()].map((m) => ({ id: m.id, nickname: m.nickname, pool: m.pool!, maxG2: m.maxG2 ?? defaultMaxG2 })),
+    members: [...team.values()].map((m) => ({
+      id: m.id,
+      nickname: m.nickname,
+      pool: m.pool!,
+      maxG2: m.maxG2 ?? defaultMaxG2,
+      stretchMaxG2: m.stretchMaxG2 ?? m.maxG2 ?? defaultMaxG2,
+    })),
     patterns: ids.length ? await db.select().from(memberPatterns).where(inArray(memberPatterns.memberId, ids)) : [],
     locks,
     seats,

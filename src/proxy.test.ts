@@ -25,6 +25,11 @@ describe("proxy", () => {
     expect(getRedirectUrl(response)).toBeNull();
   });
 
+  it("sends a signed-out launch of the installed app to the sign-in form", () => {
+    expect(getRedirectUrl(visit("/?source=pwa"))).toBe(`${ORIGIN}/login`);
+    expect(passesThrough(visit("/?source=pwa", { signedIn: true }))).toBe(true);
+  });
+
   it("lets a signed-in member through to Hari Ini at /", () => {
     expect(passesThrough(visit("/", { signedIn: true }))).toBe(true);
   });
@@ -48,6 +53,8 @@ describe("proxy", () => {
     expect(matches("/")).toBe(true);
     expect(matches("/roster")).toBe(true);
     expect(matches("/robots.txt")).toBe(false);
+    expect(matches("/sw.js")).toBe(false);
+    expect(matches("/offline.html")).toBe(false);
     expect(matches("/api/health")).toBe(false);
     expect(matches("/brand/logo-96.png")).toBe(false);
     expect(matches("/_next/static/chunk.js")).toBe(false);

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { InstallScript } from "@/components/pwa/install-script";
 import { ThemeScript } from "@/components/theme-script";
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <ThemeScript />
+        <InstallScript />
       </head>
       <body className="min-h-full">{children}</body>
     </html>

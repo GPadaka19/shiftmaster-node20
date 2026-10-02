@@ -3,22 +3,10 @@ import type { ReactNode } from "react";
 
 // Building blocks for the long-form public pages (home, privacy policy, terms).
 
-export function ProseSection({
-  id,
-  title,
-  level = 2,
-  children,
-}: {
-  id?: string;
-  title: string;
-  /** 3 for sections that sit under an h2 title (the English halves). */
-  level?: 2 | 3;
-  children: ReactNode;
-}) {
-  const Heading = level === 3 ? "h3" : "h2";
+export function ProseSection({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <section id={id} className="grid scroll-mt-6 gap-2">
-      <Heading className="text-base font-semibold tracking-tight">{title}</Heading>
+    <section id={id} className="grid scroll-mt-6 content-start gap-2">
+      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
       <div className="grid gap-2 text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground">{children}</div>
     </section>
   );

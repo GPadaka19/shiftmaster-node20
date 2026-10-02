@@ -54,11 +54,12 @@ Produksi jalan di **Coolify** (`https://sm.gpadaka.com`):
   Saat start, app menjalankan migrasi, mengisi konfigurasi awal, superadmin pertama, tim awal, dan roster minggu go-live.
 - **Postgres 17:** resource database di Coolify, dengan backup terjadwal dari Coolify.
 - Environment variables diatur di Coolify, bukan di repo.
+- **Roster minggu depan** dibuat tiap Jumat 17:30 WIB oleh Scheduled Task Coolify `weekly-roster`
+  (lihat [docs/GO-LIVE.md](docs/GO-LIVE.md) bagian 5).
 
 Workflow GitHub Actions:
 
 - `ci.yml`: lint, typecheck, test, build Next.js, dan build image Docker di `development` dan PR.
-- `weekly-roster.yml`: membuat roster minggu depan tiap Jumat 17:30 WIB (butuh secret `APP_HOST` dan `CRON_SECRET`).
 
 Langkah go-live, pengaturan Coolify, backup, dan rollback ada di [docs/GO-LIVE.md](docs/GO-LIVE.md).
 

@@ -4,8 +4,9 @@ import { getModeOn } from "@/lib/period/queries";
 import { copyWeek, generateWeek, getWeekRecord, RosterError } from "@/lib/roster/service";
 import { addDaysIso, todayIso, weekStartIso } from "@/lib/time";
 
-// Called by cron on the host every Friday 17:30 WIB:
-//   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/weekly-roster
+// Called every Friday 17:30 WIB by the Coolify scheduled task "weekly-roster",
+// from inside the app container (docs/GO-LIVE.md section 5):
+//   wget -qO- --header "Authorization: Bearer $CRON_SECRET" --post-data "" http://127.0.0.1:3000/api/cron/weekly-roster
 //
 // Makes next week's roster if it does not exist yet, and publishes it, so staff
 // always have one. Admins can still change it afterwards. A roster an admin

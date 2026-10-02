@@ -170,3 +170,34 @@ export const FIRST_ROSTER = {
     { area: "studio-g2", shift: "afternoon", position: 2, days: ["Yazid", "Labib", "Yazid", "Labib", "Yazid"] },
   ] satisfies RosterRowSeed[],
 };
+
+/** One weekday of a member's weekly pattern. `area` is set only for studio seats; lab floors rotate. */
+export type PatternSeed = { nickname: string; weekday: number; shift: string; area: string | null };
+
+/**
+ * Each member's shift per weekday, read off a week's roster. Lab staff get no
+ * area (the generator rotates them over the floors); studio staff keep the
+ * studio.
+ */
+export function patternsFromRoster(rows: readonly RosterRowSeed[]): PatternSeed[] {
+  const kindOf = new Map(AREAS.map((area) => [area.code, area.kind]));
+  const seen = new Map<string, PatternSeed>();
+  for (const row of rows) {
+    row.days.forEach((nickname, index) => {
+      const weekday = index + 1;
+      const key = `${nickname.toLowerCase()}:${weekday}`;
+      const pattern = { nickname, weekday, shift: row.shift, area: kindOf.get(row.area) === "studio" ? row.area : null };
+      const earlier = seen.get(key);
+      if (earlier && (earlier.shift !== pattern.shift || earlier.area !== pattern.area)) {
+        throw new Error(`[seed] ${nickname} has two different shifts on weekday ${weekday}`);
+      }
+      seen.set(key, pattern);
+    });
+  }
+  return [...seen.values()];
+}
+
+// The weekly patterns (Pagi/Siang per weekday) the team worked in the go-live
+// week, so the generator has rules from day one. Added once per install and
+// only while no patterns exist; the rules page is the source of truth after.
+export const FIRST_PATTERNS = patternsFromRoster(FIRST_ROSTER.rows);

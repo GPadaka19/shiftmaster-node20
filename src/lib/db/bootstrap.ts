@@ -3,8 +3,19 @@ import { addDaysIso } from "@/lib/time";
 import { DEFAULT_PIN } from "@/lib/auth/constants";
 import { hashPin, normalizeNickname } from "@/lib/auth/pin";
 import type { Db } from "./client";
-import { AREAS, FIRST_ROSTER, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
-import { areas, assignments, auditLog, members, rooms, rosterWeeks, seatTemplates, settings, shifts } from "./schema";
+import { AREAS, FIRST_PATTERNS, FIRST_ROSTER, MEMBERS, ROOMS, SEATS, SETTINGS, SHIFTS } from "./seed-data";
+import {
+  areas,
+  assignments,
+  auditLog,
+  memberPatterns,
+  members,
+  rooms,
+  rosterWeeks,
+  seatTemplates,
+  settings,
+  shifts,
+} from "./schema";
 
 // What every install needs before anyone can sign in. Runs at server start in
 // production (src/instrumentation.ts) and from `pnpm db:seed`. Only adds rows
@@ -159,4 +170,43 @@ export async function seedFirstRoster(db: Db) {
   }
 
   await db.insert(settings).values({ key: FIRST_ROSTER_SEEDED, value: new Date().toISOString() }).onConflictDoNothing();
+}
+
+const FIRST_PATTERNS_SEEDED = "first_patterns_seeded_at";
+
+/**
+ * The team's weekly patterns from seed-data.ts. Runs once per install, and
+ * only while nobody has a pattern yet, so it never overwrites the rules page.
+ */
+export async function seedFirstPatterns(db: Db) {
+  const [done] = await db.select({ key: settings.key }).from(settings).where(eq(settings.key, FIRST_PATTERNS_SEEDED));
+  if (done) return;
+
+  const [anyPattern] = await db.select({ memberId: memberPatterns.memberId }).from(memberPatterns).limit(1);
+  if (!anyPattern) {
+    const memberId = new Map(
+      (await db.select({ id: members.id, nickname: members.nicknameNormalized }).from(members)).map((m) => [m.nickname, m.id]),
+    );
+    const areaId = new Map((await db.select({ id: areas.id, code: areas.code }).from(areas)).map((a) => [a.code, a.id]));
+    const shiftId = new Map((await db.select({ id: shifts.id, code: shifts.code }).from(shifts)).map((s) => [s.code, s.id]));
+
+    // Members renamed or removed since go-live are skipped rather than failing the start.
+    const rows = FIRST_PATTERNS.flatMap((pattern) => {
+      const member = memberId.get(normalizeNickname(pattern.nickname));
+      const shift = shiftId.get(pattern.shift);
+      const area = pattern.area === null ? null : areaId.get(pattern.area);
+      if (member === undefined || shift === undefined || area === undefined) return [];
+      return [{ memberId: member, weekday: pattern.weekday, shiftId: shift, areaId: area }];
+    });
+
+    if (rows.length > 0) {
+      await db.transaction(async (tx) => {
+        await tx.insert(memberPatterns).values(rows).onConflictDoNothing();
+        await tx.insert(auditLog).values({ actorId: null, action: "rules.seed", subject: "member_patterns", detail: { rows: rows.length } });
+      });
+    }
+    console.info(`[seed] ${rows.length} weekly pattern rows from the go-live week`);
+  }
+
+  await db.insert(settings).values({ key: FIRST_PATTERNS_SEEDED, value: new Date().toISOString() }).onConflictDoNothing();
 }

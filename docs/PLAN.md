@@ -99,7 +99,7 @@ Browser (HP staf / laptop admin)
    │  HTML + data halaman, submit form (Server Action)
    ▼
 Next.js — 1 container
-   ├─ proxy.ts            cek cookie sesi, arahkan ke /login
+   ├─ proxy.ts            cek cookie sesi: tanpa sesi, "/" menampilkan halaman publik, lainnya ke /login
    ├─ Halaman (Server Components)   baca DB + cache Sheets langsung di server
    ├─ Server Actions      ubah roster/anggota/aturan → cek role → audit log
    ├─ Route Handlers      /api/health, /api/cron/weekly-roster
@@ -145,7 +145,7 @@ src/
     api/health/route.ts
     api/cron/weekly-roster/route.ts
     manifest.ts, icon.png       PWA (bisa di-install); logo di public/brand, sumbernya logo.png
-  proxy.ts                      cek cookie sesi → /login
+  proxy.ts                      cek cookie sesi → halaman publik di "/" atau /login
   instrumentation.ts            migrasi DB saat server start (RUN_MIGRATIONS=true)
   lib/
     auth/                       sesi, PIN, Google, role (fungsi murni + *.test.ts)

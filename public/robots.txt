@@ -1,3 +1,10 @@
 User-agent: *
+Allow: /$
 Allow: /privacy
+Allow: /terms
+Allow: /_next/static/
+Allow: /brand/
+Allow: /icon.png
+Allow: /apple-icon.png
+Allow: /manifest.webmanifest
 Disallow: /

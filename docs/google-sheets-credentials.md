@@ -1,6 +1,6 @@
 # Kredensial Google
 
-ShiftMaster memakai dua OAuth client di project Google Cloud yang sama:
+Shift Master memakai dua OAuth client di project Google Cloud yang sama:
 
 | Client | Tipe | Dipakai untuk | Env |
 |---|---|---|---|
@@ -62,7 +62,7 @@ menukarnya dengan token. Aksesnya hanya baca (`spreadsheets.readonly`).
   file client baru dan `secrets/google-oauth-token.json` dengan file token baru. Kalau di PaaS,
   ganti isi `CREDENTIALS_JSON` / `TOKEN_JSON`. Restart, lalu pastikan `GET /jadwal` masih
   mengembalikan data.
-- **ShiftMaster v2**: isi `GOOGLE_SHEETS_CLIENT_ID` dan `GOOGLE_SHEETS_CLIENT_SECRET` dari
+- **Shift Master v2**: isi `GOOGLE_SHEETS_CLIENT_ID` dan `GOOGLE_SHEETS_CLIENT_SECRET` dari
   file client, lalu `GOOGLE_SHEETS_REFRESH_TOKEN` dari field `refresh_token` di file token.
 
 ### 6. Matikan yang lama
@@ -97,3 +97,33 @@ Setelah yang baru terbukti jalan:
    - **Authorized redirect URIs** dikosongkan, karena tombol Google memakai mode popup.
 3. Salin **Client ID** ke `GOOGLE_CLIENT_ID`. Client secret tidak dipakai, karena server
    hanya memverifikasi ID token.
+
+---
+
+## C. Verifikasi branding (nama dan logo di layar login Google)
+
+Tanpa verifikasi, layar "Sign in with Google" hanya menampilkan domain (`gpadaka.com`).
+Isi **Google Auth Platform → Branding** persis seperti ini, karena pemeriksaan Google
+mencocokkannya dengan halaman yang terbuka tanpa login:
+
+| Kolom | Nilai |
+|---|---|
+| App name | `Shift Master` (sama persis dengan judul di halaman utama) |
+| Application home page | `https://sm.gpadaka.com/` |
+| Application privacy policy link | `https://sm.gpadaka.com/privacy` |
+| Application terms of service link | `https://sm.gpadaka.com/terms` |
+| Authorized domains | `gpadaka.com` (harus terverifikasi di Google Search Console) |
+
+Yang dijaga di kode:
+
+- `/` tidak boleh redirect untuk pengunjung tanpa sesi. `src/proxy.ts` menampilkan
+  halaman `/about` di alamat `/` (rewrite), sedangkan anggota yang sudah masuk tetap
+  melihat Hari Ini.
+- Halaman utama menjelaskan tujuan aplikasi, kenapa memakai akun Google, dan menautkan
+  kebijakan privasi. Kebijakan privasi punya bagian khusus "Data pengguna Google".
+- `public/robots.txt` mengizinkan `/`, `/privacy`, dan `/terms`.
+- Kalau data yang disimpan atau dibaca dari Google berubah, perbarui
+  `src/app/(public)/privacy/page.tsx` (versi Indonesia dan Inggris).
+
+Google membatasi pengajuan ulang: lebih dari sekali dalam 24 jam atau lebih dari dua kali
+seminggu bisa kena jeda wajib. Pastikan semuanya sudah live sebelum menekan **Verify branding**.

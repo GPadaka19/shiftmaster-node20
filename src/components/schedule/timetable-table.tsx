@@ -3,7 +3,7 @@ import { SLOTS, slotLabel, type SlotTiming } from "@/lib/schedule/slots";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
 import { STATUS_LABEL, TIMING_LABEL } from "./session";
 
-/** Rooms × five slots. Scrolls sideways on phones with the room column pinned. */
+/** Rooms × five slots, for tablets and up (phones get RoomSchedule cards). Nothing is cut off. */
 export function TimetableTable({ rooms, timings }: { rooms: TimetableRoom[]; timings?: SlotTiming[] }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -39,10 +39,10 @@ export function TimetableTable({ rooms, timings }: { rooms: TimetableRoom[]; tim
                   {session.status === "empty" ? (
                     <span className="text-muted-foreground/60">—</span>
                   ) : (
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 break-words">
                       <p
                         className={cn(
-                          "line-clamp-2 font-medium",
+                          "font-medium",
                           session.status === "booked" && "text-info",
                           session.status === "conflict" && "text-destructive",
                         )}
@@ -53,7 +53,7 @@ export function TimetableTable({ rooms, timings }: { rooms: TimetableRoom[]; tim
                         )}
                       </p>
                       {session.className && <p className="text-xs text-muted-foreground">{session.className}</p>}
-                      {session.lecturer && <p className="line-clamp-1 text-xs text-muted-foreground">{session.lecturer}</p>}
+                      {session.lecturer && <p className="text-xs text-muted-foreground">{session.lecturer}</p>}
                     </div>
                   )}
                 </td>

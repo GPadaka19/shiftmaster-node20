@@ -3,6 +3,7 @@ import { DayTabs } from "@/components/day-tabs";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { SheetFreshness } from "@/components/schedule/freshness";
+import { RoomSchedule } from "@/components/schedule/room-schedule";
 import { StatusLegend } from "@/components/schedule/session";
 import { TimetableTable } from "@/components/schedule/timetable-table";
 import { TabLink } from "@/components/tab-link";
@@ -132,7 +133,14 @@ export default async function TimetablePage({ searchParams }: PageProps<"/schedu
                 {group.area?.name ?? "Lainnya"}
                 <span className="ml-2 text-sm font-normal text-muted-foreground">{group.items.length} ruang</span>
               </h2>
-              <TimetableTable rooms={group.items} timings={timings} />
+              <div className="grid gap-2 md:hidden">
+                {group.items.map((room) => (
+                  <RoomSchedule key={room.code} room={room} timings={timings} />
+                ))}
+              </div>
+              <div className="hidden md:block">
+                <TimetableTable rooms={group.items} timings={timings} />
+              </div>
             </section>
           ))}
           <StatusLegend />

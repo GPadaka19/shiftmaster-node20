@@ -71,9 +71,23 @@ export function TimingBadge({ timing }: { timing: SlotTiming }) {
   );
 }
 
-/** "Basis Data · 22-IF-01 · Dosen A", without the empty parts. */
-export function sessionDetail(session: Session): string {
-  return [session.className, session.lecturer].filter(Boolean).join(" · ");
+/** Everything the sheet says about one class, nothing cut off: course, class, every lecturer. */
+export function SessionDetails({ session, timing = null }: { session: Session; timing?: SlotTiming }) {
+  return (
+    <div className="min-w-0 space-y-1 break-words">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {session.course ? (
+          <span className="text-sm font-medium">{session.course}</span>
+        ) : (
+          session.status === "empty" && <span className="text-sm text-muted-foreground">Kosong</span>
+        )}
+        {session.status !== "empty" && <StatusBadge status={session.status} />}
+        <TimingBadge timing={timing} />
+      </div>
+      {session.className && <p className="text-sm text-muted-foreground">{session.className}</p>}
+      {session.lecturer && <p className="text-sm text-muted-foreground">{session.lecturer}</p>}
+    </div>
+  );
 }
 
 /** The day's five slots for one room, as rows. */
@@ -81,16 +95,9 @@ export function SessionList({ sessions, timings }: { sessions: Session[]; timing
   return (
     <ol className="divide-y divide-border">
       {sessions.map((session, i) => (
-        <li key={i} className={cn("grid grid-cols-[6.5rem_1fr] gap-3 py-2.5", timings?.[i] && "bg-brand/5")}>
+        <li key={i} className={cn("grid grid-cols-[5.25rem_1fr] gap-3 py-2.5 sm:grid-cols-[6.5rem_1fr]", timings?.[i] && "bg-brand/5")}>
           <span className="pl-1 text-sm text-muted-foreground tabular-nums">{slotLabel(SLOTS[i])}</span>
-          <div className="min-w-0 space-y-0.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {session.course && <span className="text-sm font-medium">{session.course}</span>}
-              <StatusBadge status={session.status} />
-              <TimingBadge timing={timings?.[i] ?? null} />
-            </div>
-            {sessionDetail(session) && <p className="text-sm text-muted-foreground">{sessionDetail(session)}</p>}
-          </div>
+          <SessionDetails session={session} timing={timings?.[i] ?? null} />
         </li>
       ))}
     </ol>

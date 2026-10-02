@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import type { SlotTiming } from "@/lib/schedule/slots";
 import type { TimetableRoom } from "@/lib/sheets/timetable";
-import { sessionDetail, SessionList, SlotStrip, StatusBadge, TimingBadge } from "./session";
+import { SessionDetails, SessionList, SlotStrip } from "./session";
 
 /**
  * One room's day: code, five-slot strip, and what is on now (or next).
@@ -19,20 +19,7 @@ export function RoomDayCard({ room, timings }: { room: TimetableRoom; timings?: 
           <SlotStrip sessions={room.sessions} timings={timings} className="flex-1" />
           <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
         </div>
-        {focus && (
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-sm">
-            <TimingBadge timing={timings![focusIndex]} />
-            {focus.status === "empty" ? (
-              <span className="text-muted-foreground">Kosong</span>
-            ) : (
-              <>
-                <span className="font-medium">{focus.course}</span>
-                <StatusBadge status={focus.status} />
-                {sessionDetail(focus) && <span className="text-muted-foreground">· {sessionDetail(focus)}</span>}
-              </>
-            )}
-          </div>
-        )}
+        {focus && <SessionDetails session={focus} timing={timings![focusIndex]} />}
       </summary>
       <div className="border-t border-border px-3">
         <SessionList sessions={room.sessions} timings={timings} />

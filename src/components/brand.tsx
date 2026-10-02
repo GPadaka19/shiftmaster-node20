@@ -36,7 +36,7 @@ export function Brand({ className, large = false }: { className?: string; large?
   return (
     <span className={cn("inline-flex items-center gap-2.5 font-semibold tracking-tight", large && "gap-3", className)}>
       <BrandMark className={large ? "size-12 rounded-lg" : undefined} />
-      ShiftMaster
+      Shift Master
     </span>
   );
 }

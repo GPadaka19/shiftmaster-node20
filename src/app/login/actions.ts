@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { recordSignIn } from "@/lib/activity/record";
 import { PIN_LOCK_MINUTES, PIN_MAX_ATTEMPTS } from "@/lib/auth/constants";
 import { verifyGoogleCredential } from "@/lib/auth/google";
 import { isPinLocked, normalizeNickname, PIN_PATTERN, registerPinFailure, verifyPin } from "@/lib/auth/pin";
@@ -88,6 +89,7 @@ export async function signInWithPin(_previous: PinSignInState, formData: FormDat
     await db.update(members).set({ failedPinAttempts: 0, pinLockedUntil: null }).where(eq(members.id, member.id));
   }
   await createSession(member.id);
+  await recordSignIn(member.id, "pin");
   redirect(safeNextPath(parsed.data.next));
 }
 
@@ -108,5 +110,6 @@ export async function signInWithGoogle(credential: string, next?: string): Promi
   if (!hasRole(member.role, "admin")) return { error: "Akun staf masuk dengan nickname dan PIN." };
 
   await createSession(member.id);
+  await recordSignIn(member.id, "google");
   redirect(safeNextPath(next));
 }

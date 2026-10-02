@@ -2,6 +2,7 @@ import { ChevronRight, LogOut } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/page-header";
+import { InstallButton } from "@/components/pwa/install-button";
 import { adminItemsFor } from "@/components/shell/admin-items";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,16 @@ export default async function AccountPage() {
           </CardContent>
         </Card>
 
+        <Card id="install" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle>Aplikasi</CardTitle>
+            <CardDescription>Pasang Shift Master di layar utama supaya terbuka seperti aplikasi biasa.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InstallButton />
+          </CardContent>
+        </Card>
+
         {usesPin(member.role) && (
           <Card>
             <CardHeader>
@@ -89,6 +100,16 @@ export default async function AccountPage() {
             Keluar
           </Button>
         </form>
+
+        <p className="text-sm text-muted-foreground">
+          <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
+            Kebijakan Privasi
+          </Link>{" "}
+          ·{" "}
+          <Link href="/terms" className="underline underline-offset-4 hover:text-foreground">
+            Ketentuan Layanan
+          </Link>
+        </p>
       </div>
     </>
   );

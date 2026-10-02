@@ -30,7 +30,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* ShiftMaster semantic colors. Brand orange marks "now / active" only. */
+  /* Shift Master semantic colors. Brand orange marks "now / active" only. */
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-text: var(--brand-text);

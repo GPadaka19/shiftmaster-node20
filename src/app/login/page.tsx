@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/brand";
+import { PUBLIC_LINKS } from "@/components/public-links";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { getCurrentMember } from "@/lib/auth/session";
@@ -44,11 +45,13 @@ export default async function SignInPage({ searchParams }: PageProps<"/login">) 
           </TabsContent>
         </Tabs>
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          <Link href="/privacy" className="underline underline-offset-4 hover:text-foreground">
-            Kebijakan Privasi
-          </Link>
-        </p>
+        <nav aria-label="Tentang aplikasi" className="mt-8 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          {PUBLIC_LINKS.map(({ href, label }) => (
+            <Link key={href} href={href} className="underline underline-offset-4 hover:text-foreground">
+              {label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </main>
   );

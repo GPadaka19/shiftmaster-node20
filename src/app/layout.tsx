@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { InstallScript } from "@/components/pwa/install-script";
 import { ThemeScript } from "@/components/theme-script";
 import "./globals.css";
 
@@ -7,9 +8,9 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "ShiftMaster", template: "%s · ShiftMaster" },
+  title: { default: "Shift Master", template: "%s · Shift Master" },
   description: "Jadwal shift dan jadwal lab UPT Laboratorium.",
-  applicationName: "ShiftMaster",
+  applicationName: "Shift Master",
 };
 
 export const viewport: Viewport = {
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <ThemeScript />
+        <InstallScript />
       </head>
       <body className="min-h-full">{children}</body>
     </html>

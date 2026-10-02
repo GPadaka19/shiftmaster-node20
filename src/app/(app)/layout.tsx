@@ -1,7 +1,9 @@
 import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
+import { ActivityTracker } from "@/components/activity/activity-tracker";
 import { Brand } from "@/components/brand";
 import { ModeBadge } from "@/components/mode-badge";
+import { InstallCard } from "@/components/pwa/install-card";
 import { BottomNav, SidebarNav } from "@/components/shell/nav-links";
 import { hasRole, ROLE_LABEL } from "@/lib/auth/roles";
 import { requireMember } from "@/lib/auth/session";
@@ -60,6 +62,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
         <main className="flex-1 px-4 pt-6 pb-24 lg:px-8 lg:pt-8 lg:pb-10">
           <div className="mx-auto w-full max-w-5xl">{children}</div>
+          <InstallCard />
+          <ActivityTracker />
         </main>
 
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] lg:hidden">

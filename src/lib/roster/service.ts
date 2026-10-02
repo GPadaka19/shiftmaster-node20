@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, lt, max } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, max, sql } from "drizzle-orm";
 import { writeAudit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import type { Executor } from "@/lib/db/client";
@@ -7,7 +7,8 @@ import { areas, assignments, memberPatterns, members, rosterWeeks, shifts } from
 import { getModeOn } from "@/lib/period/queries";
 import type { Mode } from "@/lib/period/resolve";
 import { addDaysIso, formatWeekRange, weekDates } from "@/lib/time";
-import { generateLectureRoster, type GeneratedAssignment, type GeneratorInput, type GenSeat } from "./generate";
+import { G2_HISTORY_WEEKS } from "./constants";
+import { generateLectureRoster, type GeneratedAssignment, type GeneratorInput, type GenHistory, type GenSeat } from "./generate";
 import { getRosterSlots } from "./queries";
 import { loadWeekRules } from "./week-rules";
 
@@ -55,7 +56,29 @@ export async function loadGeneratorInput(weekStart: string): Promise<GeneratorIn
     patterns: ids.length ? await db.select().from(memberPatterns).where(inArray(memberPatterns.memberId, ids)) : [],
     locks,
     seats,
+    history: ids.length ? await loadG2History(weekStart, ids) : [],
   };
+}
+
+/** Each member's lab floor duties, and how many were in G2, in the published weeks just before `weekStart`. */
+async function loadG2History(weekStart: string, memberIds: number[]): Promise<GenHistory[]> {
+  const g2Days = sql<number>`count(*) filter (where ${areas.building} = 'G2')`.mapWith(Number);
+  return db
+    .select({ memberId: assignments.memberId, floorDays: sql<number>`count(*)`.mapWith(Number), g2Days })
+    .from(assignments)
+    .innerJoin(rosterWeeks, eq(assignments.rosterWeekId, rosterWeeks.id))
+    .innerJoin(areas, eq(assignments.areaId, areas.id))
+    .where(
+      and(
+        eq(rosterWeeks.status, "published"),
+        eq(rosterWeeks.mode, "lecture"),
+        gte(rosterWeeks.weekStart, addDaysIso(weekStart, -7 * G2_HISTORY_WEEKS)),
+        lt(rosterWeeks.weekStart, weekStart),
+        eq(areas.kind, "floor"),
+        inArray(assignments.memberId, memberIds),
+      ),
+    )
+    .groupBy(assignments.memberId);
 }
 
 /** The week's row, locked for the transaction when asked. Throws when the week has no roster. */

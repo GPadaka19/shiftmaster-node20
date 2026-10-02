@@ -13,7 +13,9 @@ import { seededRandom, shuffled } from "./random";
 //         and not enough G2-eligible people under their cap, members on the
 //         default cap may go one higher (stretchMaxG2), fewest G2 first;
 //       * a member locked to G2 on a weekday sits in G2 that day;
-//       * nobody repeats a floor in the week if it can be avoided.
+//       * nobody repeats a floor in the week if it can be avoided;
+//       * G2 evens out across weeks: whoever had more than their share in
+//         the last few published weeks (`history`) gets less this week.
 //
 // Each attempt is greedy with random tie-breaks; the best of many attempts
 // wins. Pass a fixed seed to get the same roster back.
@@ -26,6 +28,8 @@ export type GenMember = { id: number; nickname: string; pool: Pool; maxG2: numbe
 /** weekday: 1 = Monday … 5 = Friday. areaId null means "rotate me". */
 export type GenPattern = { memberId: number; weekday: number; shiftId: number; areaId: number | null };
 export type GenLock = { memberId: number; weekday: number };
+/** One member's lab floor duties in recent published weeks, and how many of them were in G2. */
+export type GenHistory = { memberId: number; floorDays: number; g2Days: number };
 
 export type GeneratorInput = {
   /** The five dates of the week, Monday first. */
@@ -35,6 +39,8 @@ export type GeneratorInput = {
   locks: readonly GenLock[];
   /** Lecture seats only. */
   seats: readonly GenSeat[];
+  /** Recent weeks, for evening out G2 across weeks. Empty or missing: this week alone. */
+  history?: readonly GenHistory[];
 };
 
 export type GeneratedAssignment = { date: string; areaId: number; shiftId: number; memberId: number; position: number };
@@ -117,10 +123,13 @@ function runAttempt(input: GeneratorInput, random: () => number): GeneratorResul
     }
   }
   const eligibleDays = [...workdays].filter(([id]) => (members.get(id)?.maxG2 ?? 0) > 0).reduce((sum, [, days]) => sum + days, 0);
+  // Whoever is ahead of their share from recent weeks gives some of this week's back.
+  const debt = g2Debt(input.history ?? [], new Set([...workdays.keys()].filter((id) => (members.get(id)?.maxG2 ?? 0) > 0)));
   const fairShare = new Map<number, number>();
   for (const [id, days] of workdays) {
     const cap = members.get(id)?.maxG2 ?? 0;
-    fairShare.set(id, cap > 0 && eligibleDays > 0 ? Math.min(cap, (totalG2 * days) / eligibleDays) : 0);
+    const share = cap > 0 && eligibleDays > 0 ? (totalG2 * days) / eligibleDays - (debt.get(id) ?? 0) : 0;
+    fairShare.set(id, Math.min(cap, Math.max(0, share)));
   }
 
   const stretchCap = (id: number) => {
@@ -279,4 +288,21 @@ function stretchNotes(input: GeneratorInput, assignments: readonly GeneratedAssi
   return input.members
     .filter((m) => (m.stretchMaxG2 ?? m.maxG2) > m.maxG2 && (g2.get(m.id) ?? 0) > m.maxG2)
     .map((m) => `${m.nickname} dapat ${g2.get(m.id)} shift G2 (batas ${m.maxG2} dinaikkan karena kursi G2 kurang orang).`);
+}
+
+/**
+ * How many G2 duties each member had beyond their share in `history`: positive
+ * means more than fair, negative fewer. The share is everyone's G2 rate over
+ * the same weeks times the member's own floor days, so days off do not count
+ * against anyone. Only `eligible` members (G2 cap above 0 this week) take part.
+ */
+export function g2Debt(history: readonly GenHistory[], eligible: ReadonlySet<number>): Map<number, number> {
+  const rows = history.filter((h) => eligible.has(h.memberId) && h.floorDays > 0);
+  const floorDays = rows.reduce((sum, h) => sum + h.floorDays, 0);
+  const g2Days = rows.reduce((sum, h) => sum + h.g2Days, 0);
+  const debt = new Map<number, number>();
+  if (floorDays === 0) return debt;
+  const rate = g2Days / floorDays;
+  for (const h of rows) debt.set(h.memberId, h.g2Days - rate * h.floorDays);
+  return debt;
 }

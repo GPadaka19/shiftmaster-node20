@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { distribution } from "./distribution";
-import { generateLectureRoster, type GenArea, type GeneratorInput, type GenPattern, type GenSeat, type GenShift } from "./generate";
+import {
+  g2Debt,
+  generateLectureRoster,
+  type GenArea,
+  type GeneratorInput,
+  type GenHistory,
+  type GenPattern,
+  type GenSeat,
+  type GenShift,
+} from "./generate";
 import { isG2Floor, validateRoster } from "./validate";
 
 // A week shaped like the real lecture roster: 6 floor areas (2 in G2, 4 in G7)
@@ -178,6 +187,80 @@ describe("generateLectureRoster when some lab staff are G7 only", () => {
     const fixed = members.map((m) => (m.pool === "lab" && !ZERO.includes(m.id) ? { ...m, stretchMaxG2: 2 } : m));
     const capped = generateLectureRoster({ ...base, members: fixed }, { seed: 3, attempts: 20 });
     expect(capped.warnings.some((w) => w.includes("tidak kebagian kursi"))).toBe(true);
+  });
+});
+
+describe("g2Debt", () => {
+  it("measures each member against everyone's G2 rate, per floor day", () => {
+    const history: GenHistory[] = [
+      { memberId: 1, floorDays: 10, g2Days: 6 },
+      { memberId: 2, floorDays: 10, g2Days: 2 },
+      { memberId: 3, floorDays: 5, g2Days: 2 },
+    ];
+    // 10 G2 out of 25 floor days: a rate of 0.4.
+    const debt = g2Debt(history, new Set([1, 2, 3]));
+    expect(debt.get(1)).toBeCloseTo(2);
+    expect(debt.get(2)).toBeCloseTo(-2);
+    expect(debt.get(3)).toBeCloseTo(0);
+  });
+
+  it("leaves out members who cannot take G2 this week, and copes with no history", () => {
+    const debt = g2Debt([{ memberId: 1, floorDays: 10, g2Days: 0 }, { memberId: 2, floorDays: 10, g2Days: 4 }], new Set([2]));
+    expect([...debt.keys()]).toEqual([2]);
+    expect(debt.get(2)).toBeCloseTo(0);
+    expect(g2Debt([], new Set([1])).size).toBe(0);
+  });
+});
+
+describe("generateLectureRoster across weeks", () => {
+  // Every lab member on a cap of 2, so G2 has room to move between them.
+  const plain = input({ locks: [] });
+  const base = { ...plain, members: plain.members.map((m) => (m.pool === "lab" ? { ...m, maxG2: 2 } : m)) };
+  const g2Count = (assignments: { memberId: number; areaId: number }[], member: number) =>
+    assignments.filter((a) => a.memberId === member && isG2Floor(areaOf(a.areaId))).length;
+
+  it("gives less G2 to whoever had more than their share recently", () => {
+    // Lab3 had G2 on every floor day of the last four weeks; Lab4 had none.
+    const history: GenHistory[] = LAB.map((id) => ({
+      memberId: id,
+      floorDays: 20,
+      g2Days: id === 3 ? 20 : id === 4 ? 0 : 7,
+    }));
+    const result = generateLectureRoster({ ...base, history }, { seed: 5 });
+    expect(g2Count(result.assignments, 3)).toBe(0);
+    expect(g2Count(result.assignments, 4)).toBe(2);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("evens out G2 over many weeks", () => {
+    const eligible = LAB;
+    const totals = (useHistory: boolean) => {
+      const weeks: GenHistory[][] = [];
+      const total = new Map<number, number>();
+      for (let week = 0; week < 8; week++) {
+        const history = LAB.map((memberId) => {
+          const recent = weeks.slice(-4).flat().filter((h) => h.memberId === memberId);
+          return {
+            memberId,
+            floorDays: recent.reduce((sum, h) => sum + h.floorDays, 0),
+            g2Days: recent.reduce((sum, h) => sum + h.g2Days, 0),
+          };
+        });
+        const result = generateLectureRoster({ ...base, history: useHistory ? history : [] }, { seed: 100 + week, attempts: 60 });
+        weeks.push(
+          LAB.map((memberId) => ({
+            memberId,
+            floorDays: result.assignments.filter((a) => a.memberId === memberId).length,
+            g2Days: g2Count(result.assignments, memberId),
+          })),
+        );
+        for (const id of eligible) total.set(id, (total.get(id) ?? 0) + g2Count(result.assignments, id));
+      }
+      const values = eligible.map((id) => total.get(id)!);
+      return Math.max(...values) - Math.min(...values);
+    };
+    expect(totals(true)).toBeLessThanOrEqual(2);
+    expect(totals(true)).toBeLessThan(totals(false));
   });
 });
 

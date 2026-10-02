@@ -8,5 +8,11 @@ export const DEFAULT_MAX_G2 = 2;
  */
 export const G2_STRETCH = 1;
 
+/**
+ * How many published weeks before the one being generated count toward G2
+ * fairness: whoever had more G2 than their share in these weeks gets less now.
+ */
+export const G2_HISTORY_WEEKS = 4;
+
 /** Settings key that overrides DEFAULT_MAX_G2 (edited on the rules page). */
 export const MAX_G2_DEFAULT_SETTING = "max_g2_per_week_default";

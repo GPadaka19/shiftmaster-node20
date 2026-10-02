@@ -144,6 +144,12 @@
   --sidebar-ring: #ff7a33;
 }
 
+/* Public pages carry both languages; the ID / EN switch shows one (lib/public-lang.ts). */
+:root:not([data-public-lang="en"]) [data-lang="en"],
+[data-public-lang="en"] [data-lang="id"] {
+  display: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

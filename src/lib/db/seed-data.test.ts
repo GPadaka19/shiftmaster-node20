@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { weekStartIso } from "@/lib/time";
-import { AREAS, ROOMS, SEATS, SHIFTS } from "./seed-data";
+import { AREAS, FIRST_PATTERNS, MEMBERS, ROOMS, SEATS, SHIFTS } from "./seed-data";
 
 const areaCodes = new Set(AREAS.map((a) => a.code));
 const shiftMode = new Map(SHIFTS.map((s) => [s.code, s.mode]));
@@ -67,5 +67,28 @@ describe("weekStartIso", () => {
     expect(weekStartIso("2026-09-30")).toBe("2026-09-28"); // Wednesday
     expect(weekStartIso("2026-09-28")).toBe("2026-09-28"); // Monday
     expect(weekStartIso("2026-10-04")).toBe("2026-09-28"); // Sunday
+  });
+});
+
+describe("FIRST_PATTERNS", () => {
+  it("gives every lab and studio member exactly one shift on each weekday", () => {
+    const team = MEMBERS.filter((m) => m.role === "staff");
+    for (const member of team) {
+      const days = FIRST_PATTERNS.filter((p) => p.nickname === member.nickname).map((p) => p.weekday).sort();
+      expect(days, member.nickname).toEqual([1, 2, 3, 4, 5]);
+    }
+    expect(FIRST_PATTERNS).toHaveLength(team.length * 5);
+  });
+
+  it("keeps studio staff in the studio and lets lab staff rotate", () => {
+    const pool = new Map(MEMBERS.flatMap((m) => (m.role === "staff" ? [[m.nickname, m.pool]] : [])));
+    for (const p of FIRST_PATTERNS) {
+      expect(p.area, p.nickname).toBe(pool.get(p.nickname) === "studio" ? "studio-g2" : null);
+    }
+  });
+
+  it("matches the go-live sheet for Thoriq: Pagi, Siang, Pagi, Siang, Pagi", () => {
+    const thoriq = FIRST_PATTERNS.filter((p) => p.nickname === "Thoriq").sort((a, b) => a.weekday - b.weekday);
+    expect(thoriq.map((p) => p.shift)).toEqual(["morning", "afternoon", "morning", "afternoon", "morning"]);
   });
 });
